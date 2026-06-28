@@ -5,7 +5,7 @@ COMPOSE := docker compose
 WEB := pnpm --dir web
 
 .PHONY: help verify deps fmt lint test build compose-config open-pilot-check \
-	containers-up containers-down containers-clean logs db-up db-shell migrate db-reset dev-web dev-api dev
+	containers-up containers-down containers-clean logs db-up db-shell migrate db-reset seed dev-web dev-api api-smoke dev
 
 help:
 	@awk 'BEGIN {FS = ":.*##"; printf "Commands:\n"} /^[a-zA-Z0-9_-]+:.*##/ {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -60,11 +60,22 @@ db-reset: ## Reset local Postgres volume and rerun migrations
 	$(COMPOSE) down --volumes --remove-orphans
 	$(MAKE) migrate
 
+seed: migrate ## Apply the California seed fixture
+	$(COMPOSE) exec -T postgres psql -v ON_ERROR_STOP=1 -U "$${POSTGRES_USER:-dsa_slate}" -d "$${POSTGRES_DB:-dsa_slate}" < seeds/california.sql
+
 dev-web: deps ## Start local Vite frontend dev server
 	$(WEB) run dev
 
-dev-api: ## Run the Go backend locally
+dev-api: db-up ## Run the Go backend locally against compose Postgres
+	@published_port="$$( $(COMPOSE) port postgres 5432 )"; \
+	postgres_port="$${published_port##*:}"; \
+	DATABASE_URL="$${DATABASE_URL:-postgres://$${POSTGRES_USER:-dsa_slate}:$${POSTGRES_PASSWORD:-change-me}@localhost:$${POSTGRES_PORT:-$${postgres_port:-5432}}/$${POSTGRES_DB:-dsa_slate}?sslmode=disable}"; \
+	export DATABASE_URL; \
 	cd backend && go run ./cmd/app
+
+api-smoke: ## Curl the local API health and directory endpoints
+	@curl -fsS "http://localhost:$${API_PORT:-8080}/healthz" >/dev/null
+	@curl -fsS "http://localhost:$${API_PORT:-8080}/api/directory" >/dev/null
 
 dev: db-up migrate dev-web ## Start database, run migrations, then start frontend
 

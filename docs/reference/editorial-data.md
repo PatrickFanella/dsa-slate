@@ -1,6 +1,6 @@
 # Editorial Data Reference
 
-DSA Slate starts with manually reviewed, source-linked seed data. The first trusted-directory MVP uses the California cluster and checked-in seed files under `web/src/data/`.
+DSA Slate starts with manually reviewed, source-linked seed data. The first source-linked MVP uses the California cluster and checked-in seed files under `web/src/data/`. The public homepage also includes a methodology/disclaimer slice that explains these source rules to users.
 
 ## Required fields for public records
 
@@ -12,21 +12,23 @@ Every public endorsement, recommendation, voter guide, and measure position must
 - confidence label
 - election or jurisdiction context when known
 
+Public UI copy keeps records source-linked and manual, rather than implying automated verification.
+
 ## Endorsement wording rule
 
 Do not collapse `recommended` into `endorsed`. If a chapter guide says “recommend,” publish `recommended`. If a chapter guide says “endorse,” publish `endorsed`.
 
 ## Confidence labels
 
-- `official_source` — DSA national, state, or chapter website.
-- `official_social_source` — verified DSA body social account.
-- `campaign_source` — candidate claims endorsement; needs confirmation.
-- `press_source` — news report; needs official confirmation where possible.
+- `official_source` — recorded from an official DSA national, state, or chapter website.
+- `official_social_source` — recorded from a verified DSA body social account.
+- `campaign_source` — recorded from a candidate or campaign claim; manual review required.
+- `press_source` — recorded from a press report; manual review required.
 - `needs_review` — unclear, incomplete, or unverified source.
 
 ## First-slice privacy rule
 
-The trusted-directory MVP does not store voter addresses. Search is static text search or browsing only. Future ZIP/address lookup requires a separate privacy review before implementation.
+The source-linked MVP does not store raw voter addresses. Search is static text search or browsing only. Future ZIP/address lookup requires a separate privacy review before implementation.
 
 ## Seed review checklist
 

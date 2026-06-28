@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS chapters (
   id text PRIMARY KEY,
   name text NOT NULL,
-  state text,
+  state text NOT NULL,
   website_url text,
   official_dsa_url text,
   coverage_notes text,
@@ -22,11 +22,11 @@ CREATE TABLE IF NOT EXISTS elections (
 
 CREATE TABLE IF NOT EXISTS races (
   id text PRIMARY KEY,
-  election_id text REFERENCES elections(id),
+  election_id text NOT NULL REFERENCES elections(id),
   office text NOT NULL,
   district text,
-  level text,
-  jurisdiction text
+  level text NOT NULL,
+  jurisdiction text NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS candidates (
@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS candidates (
 CREATE TABLE IF NOT EXISTS voter_guides (
   id text PRIMARY KEY,
   title text NOT NULL,
-  chapter_id text REFERENCES chapters(id),
+  chapter_id text NOT NULL REFERENCES chapters(id),
   election_id text REFERENCES elections(id),
   source_url text NOT NULL,
   confidence text NOT NULL DEFAULT 'needs_review',
@@ -57,9 +57,9 @@ ALTER TABLE voter_guides
 
 CREATE TABLE IF NOT EXISTS endorsements (
   id text PRIMARY KEY,
-  candidate_id text REFERENCES candidates(id),
-  race_id text REFERENCES races(id),
-  chapter_id text REFERENCES chapters(id),
+  candidate_id text NOT NULL REFERENCES candidates(id),
+  race_id text NOT NULL REFERENCES races(id),
+  chapter_id text NOT NULL REFERENCES chapters(id),
   voter_guide_id text REFERENCES voter_guides(id),
   endorsement_type text NOT NULL,
   source_url text NOT NULL,
@@ -78,17 +78,17 @@ CREATE TABLE IF NOT EXISTS endorsements (
 
 CREATE TABLE IF NOT EXISTS ballot_measures (
   id text PRIMARY KEY,
-  election_id text REFERENCES elections(id),
+  election_id text NOT NULL REFERENCES elections(id),
   title text NOT NULL,
-  jurisdiction text,
+  jurisdiction text NOT NULL,
   measure_number text,
   summary text
 );
 
 CREATE TABLE IF NOT EXISTS measure_positions (
   id text PRIMARY KEY,
-  measure_id text REFERENCES ballot_measures(id),
-  chapter_id text REFERENCES chapters(id),
+  measure_id text NOT NULL REFERENCES ballot_measures(id),
+  chapter_id text NOT NULL REFERENCES chapters(id),
   position text NOT NULL,
   source_url text NOT NULL,
   confidence text NOT NULL DEFAULT 'needs_review',
@@ -97,3 +97,27 @@ CREATE TABLE IF NOT EXISTS measure_positions (
     confidence IN ('official_source', 'official_social_source', 'campaign_source', 'press_source', 'needs_review')
   )
 );
+
+ALTER TABLE chapters
+  ALTER COLUMN state SET NOT NULL;
+
+ALTER TABLE races
+  ALTER COLUMN election_id SET NOT NULL,
+  ALTER COLUMN level SET NOT NULL,
+  ALTER COLUMN jurisdiction SET NOT NULL;
+
+ALTER TABLE voter_guides
+  ALTER COLUMN chapter_id SET NOT NULL;
+
+ALTER TABLE endorsements
+  ALTER COLUMN candidate_id SET NOT NULL,
+  ALTER COLUMN race_id SET NOT NULL,
+  ALTER COLUMN chapter_id SET NOT NULL;
+
+ALTER TABLE ballot_measures
+  ALTER COLUMN election_id SET NOT NULL,
+  ALTER COLUMN jurisdiction SET NOT NULL;
+
+ALTER TABLE measure_positions
+  ALTER COLUMN measure_id SET NOT NULL,
+  ALTER COLUMN chapter_id SET NOT NULL;

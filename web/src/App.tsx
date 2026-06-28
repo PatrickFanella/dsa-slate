@@ -1,4 +1,5 @@
 import { EndorsementCard, MeasureCard, VoterGuideCard } from './components/DirectoryCard';
+import { MethodologyPanel } from './components/MethodologyPanel';
 import { buildDirectoryCards, directoryData } from './data';
 import { filterDirectoryCards } from './data/filter';
 import type { ReactNode } from 'react';
@@ -27,6 +28,14 @@ export default function App() {
             A source-linked election guide for DSA endorsements, recommendations, ballot measures, and voter guides
             from national, state, and local chapters.
           </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <a
+              className="rounded-xl border border-rose-200/30 bg-rose-100 px-5 py-3 font-bold text-red-950 transition hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200 focus-visible:ring-offset-2 focus-visible:ring-offset-red-950"
+              href="#methodology"
+            >
+              Methodology & disclaimer
+            </a>
+          </div>
           <div className="mt-8 grid gap-3 rounded-2xl border border-red-800 bg-red-900/40 p-4 md:grid-cols-[1fr_auto]">
             <label className="sr-only" htmlFor="slate-search">
               Text search candidates, chapters, offices, elections, or voter guides
@@ -35,7 +44,7 @@ export default function App() {
               id="slate-search"
               className="rounded-xl border border-red-700 bg-red-950 px-4 py-3 text-rose-50 placeholder:text-rose-200/60 transition focus-visible:border-rose-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200 focus-visible:ring-offset-2 focus-visible:ring-offset-red-950"
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search the trusted directory"
+              placeholder="Search this source-linked directory"
               type="search"
               value={query}
             />
@@ -66,7 +75,7 @@ export default function App() {
         <DirectorySection
           count={voterGuideCards.length}
           title="Voter guides"
-          description="Initial source-linked seed set for the trusted directory MVP."
+          description="Initial source-linked seed set for the directory MVP."
         >
           {voterGuideCards.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2">
@@ -81,8 +90,8 @@ export default function App() {
 
         <DirectorySection
           count={endorsementCards.length}
-          title="Candidate recommendations"
-          description="Recommendation and endorsement wording is preserved exactly in the public label."
+          title="Candidate endorsements & recommendations"
+          description="Recommendation and endorsement wording is preserved exactly as recorded from the source."
         >
           {endorsementCards.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2">
@@ -91,7 +100,7 @@ export default function App() {
               ))}
             </div>
           ) : hasResults ? (
-            <EmptyStateCard message="No candidate recommendations match this search." />
+            <EmptyStateCard message="No candidate endorsements or recommendations match this search." />
           ) : null}
         </DirectorySection>
 
@@ -110,6 +119,8 @@ export default function App() {
             <EmptyStateCard message="No ballot measures match this search." />
           ) : null}
         </DirectorySection>
+
+        <MethodologyPanel />
       </section>
     </main>
   );

@@ -41,7 +41,10 @@ Useful local commands:
 ```bash
 make db-up          # start Postgres
 make migrate        # apply SQL migrations
+make seed           # apply the California seed fixture
 make dev-web        # start Vite locally
+make dev-api        # run the Go API locally against compose Postgres
+make api-smoke      # curl /healthz and /api/directory on localhost
 make dev            # start DB, migrate, then run Vite
 make containers-up  # build and run Postgres, API, and web containers
 make logs           # follow compose logs
