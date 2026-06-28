@@ -13,6 +13,9 @@ describe('App', () => {
     expect(html).toContain('Voter guides');
     expect(html).toContain('Search this source-linked directory');
     expect(html).toContain('Text search only — not address lookup. Raw addresses are not stored.');
+    expect(html).toContain('Loading live directory data');
+    expect(html).toContain('Static fallback is visible while the API loads.');
+    expect(html).toContain('Chapters');
     expect(html).toContain('No raw voter addresses are stored.');
     expect(html).toContain('The public label stays as the original source used it.');
     expect(html).toContain('DSA Slate links to official election information and does not replace official voter or election sources.');

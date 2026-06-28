@@ -5,7 +5,7 @@ COMPOSE := docker compose
 WEB := pnpm --dir web
 
 .PHONY: help verify deps fmt lint test build compose-config open-pilot-check \
-	containers-up containers-down containers-clean logs db-up db-shell migrate db-reset seed dev-web dev-api api-smoke dev
+	containers-up containers-down containers-clean logs db-up db-shell migrate db-reset seed dev-web dev-api api-smoke dev dev-full
 
 help:
 	@awk 'BEGIN {FS = ":.*##"; printf "Commands:\n"} /^[a-zA-Z0-9_-]+:.*##/ {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -78,6 +78,10 @@ api-smoke: ## Curl the local API health and directory endpoints
 	@curl -fsS "http://localhost:$${API_PORT:-8080}/api/directory" >/dev/null
 
 dev: db-up migrate dev-web ## Start database, run migrations, then start frontend
+
+dev-full: seed ## Prepare DB seed, then print commands for API and web dev servers
+	@printf '%s\n' 'make dev-api'
+	@printf '%s\n' 'make dev-web'
 
 open-pilot-check:
 	@test -f .gitea/ISSUE_TEMPLATE/open-pilot-task.yaml

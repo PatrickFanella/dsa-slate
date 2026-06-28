@@ -1,16 +1,18 @@
 import { EndorsementCard, MeasureCard, VoterGuideCard } from './components/DirectoryCard';
 import { MethodologyPanel } from './components/MethodologyPanel';
-import { buildDirectoryCards, directoryData } from './data';
+import { buildDirectoryCards } from './data';
 import { filterDirectoryCards } from './data/filter';
+import { useDirectoryData, type DirectoryLoadStatus } from './data/useDirectoryData';
 import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 
-const directoryCards = buildDirectoryCards(directoryData);
-
 export default function App() {
   const [query, setQuery] = useState('');
+  const directoryState = useDirectoryData();
 
-  const filteredCards = useMemo(() => filterDirectoryCards(directoryCards, query), [query]);
+  const directoryCards = useMemo(() => buildDirectoryCards(directoryState.data), [directoryState.data]);
+
+  const filteredCards = useMemo(() => filterDirectoryCards(directoryCards, query), [directoryCards, query]);
   const endorsementCards = filteredCards.endorsements;
   const measureCards = filteredCards.measures;
   const voterGuideCards = filteredCards.voterGuides;
@@ -60,10 +62,11 @@ export default function App() {
             <p>Text search only — not address lookup. Raw addresses are not stored.</p>
             <p aria-live="polite">{visibleResultCount} visible {visibleResultCount === 1 ? 'result' : 'results'}</p>
           </div>
+          <DirectoryDataStatus errorMessage={directoryState.errorMessage} status={directoryState.status} />
         </header>
 
         <section className="grid gap-4 md:grid-cols-3">
-          <StatCard label="Seed chapters" value={directoryData.chapters.length.toString()} />
+          <StatCard label="Chapters" value={directoryState.data.chapters.length.toString()} />
           <StatCard label="Candidate records" value={endorsementCards.length.toString()} />
           <StatCard label="Voter guides" value={voterGuideCards.length.toString()} />
         </section>
@@ -165,5 +168,30 @@ function EmptyStateCard({ message }: { message: string }) {
       <h3 className="text-lg font-black text-white">No matches yet</h3>
       <p className="mt-2 text-sm leading-6">{message}</p>
     </article>
+  );
+}
+
+function DirectoryDataStatus({ errorMessage, status }: { errorMessage?: string; status: DirectoryLoadStatus }) {
+  const copy: Record<DirectoryLoadStatus, { label: string; detail: string }> = {
+    loading: {
+      label: 'Loading live directory data',
+      detail: 'Static fallback is visible while the API loads.',
+    },
+    api: {
+      label: 'Live API data',
+      detail: 'Records are loaded from the DSA Slate read API.',
+    },
+    fallback: {
+      label: 'Static fallback data',
+      detail: errorMessage
+        ? `The API did not load, so the checked-in source-linked seed is shown. ${errorMessage}`
+        : 'The API did not load, so the checked-in source-linked seed is shown.',
+    },
+  };
+
+  return (
+    <p className="mt-2 rounded-xl border border-red-800 bg-red-900/30 px-4 py-3 text-sm leading-6 text-rose-100/75">
+      <span className="font-bold text-rose-50">{copy[status].label}.</span> {copy[status].detail}
+    </p>
   );
 }

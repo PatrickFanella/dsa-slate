@@ -42,13 +42,16 @@ Useful local commands:
 make db-up          # start Postgres
 make migrate        # apply SQL migrations
 make seed           # apply the California seed fixture
-make dev-web        # start Vite locally
+make dev-web        # start Vite locally; /api proxies to http://localhost:8080
 make dev-api        # run the Go API locally against compose Postgres
 make api-smoke      # curl /healthz and /api/directory on localhost
 make dev            # start DB, migrate, then run Vite
+make dev-full       # seed the DB, then print the API + web commands to run in separate terminals
 make containers-up  # build and run Postgres, API, and web containers
 make logs           # follow compose logs
 ```
+
+For the API-backed frontend flow, run `make seed` or `make dev-full` first so the database has directory data, then start the API with `make dev-api` and run `make dev-web` in another terminal. The Vite dev server proxies `/api` to `http://localhost:8080`, so the frontend can read live directory data while keeping the checked-in California seed as fallback.
 
 ## Open Pilot
 
