@@ -1,6 +1,6 @@
 # Contributing
 
-This repository is a base template for derived SUBCULT projects. Keep changes small, reviewable, and useful across stacks.
+This repository is DSA Slate, a source-linked public election guide for DSA electoral work. Keep changes small, reviewable, and aligned with the MVP directory-first scope.
 
 ## Development flow
 
@@ -24,7 +24,7 @@ Prefer concise conventional-style subjects:
 feat: add stack recipe
 docs: update Open Pilot guidance
 fix: correct make target detection
-chore: refresh template metadata
+chore: refresh project metadata
 ```
 
 ## Open Pilot issues
@@ -56,7 +56,7 @@ Default full check:
 make verify
 ```
 
-Examples for derived templates:
+Examples:
 
 ```bash
 go test ./...
@@ -66,8 +66,8 @@ cargo test --all
 docker compose config --quiet
 ```
 
-## Template boundaries
+## Product boundaries
 
-This base template should stay stack-neutral. Do not add application scaffolding here unless the issue explicitly changes the role of this repository.
+Do not store raw voter addresses, remove source links from endorsement data, or collapse “recommended” into “endorsed.”
 
-Stack-specific scaffolds should live in derived template repositories.
+Any paid political promotion, campaign coordination, or nonprofit/legal structure work needs explicit legal review before implementation.

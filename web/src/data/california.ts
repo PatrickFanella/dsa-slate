@@ -1,0 +1,136 @@
+import type { DirectoryData } from './schema';
+
+export const californiaDirectoryData: DirectoryData = {
+  chapters: [
+    {
+      id: 'california-dsa',
+      name: 'California DSA',
+      state: 'CA',
+      websiteUrl: 'https://www.californiadsa.org/',
+      coverageNotes: 'Statewide DSA voter guide and links to local California chapter guides.',
+      active: true,
+    },
+    {
+      id: 'dsa-san-diego',
+      name: 'DSA San Diego',
+      state: 'CA',
+      websiteUrl: 'https://dsasandiego.org/',
+      coverageNotes: 'San Diego County and local voter guide coverage.',
+      active: true,
+    },
+    {
+      id: 'dsa-los-angeles',
+      name: 'DSA-LA',
+      state: 'CA',
+      websiteUrl: 'https://dsa-la.org/',
+      coverageNotes: 'Los Angeles area chapter included as a California-cluster seed source.',
+      active: true,
+    },
+  ],
+  elections: [
+    {
+      id: '2026-ca-primary',
+      name: '2026 California Primary',
+      electionDate: '2026-06-02',
+      electionType: 'primary',
+      jurisdiction: 'CA',
+    },
+  ],
+  races: [
+    {
+      id: 'ca-48-us-house-2026-primary',
+      electionId: '2026-ca-primary',
+      office: 'U.S. House',
+      district: 'CA-48',
+      level: 'federal',
+      jurisdiction: 'CA-48',
+    },
+    {
+      id: 'ca-50-us-house-2026-primary',
+      electionId: '2026-ca-primary',
+      office: 'U.S. House',
+      district: 'CA-50',
+      level: 'federal',
+      jurisdiction: 'CA-50',
+    },
+  ],
+  candidates: [
+    {
+      id: 'corinna-contreras',
+      name: 'Corinna Contreras',
+      party: 'Democrat',
+    },
+    {
+      id: 'aishwarya-sparky-mitra',
+      name: 'Aishwarya “Sparky” Mitra',
+      party: 'Democrat',
+    },
+  ],
+  voterGuides: [
+    {
+      id: 'california-dsa-2026-primary-guide',
+      title: 'California DSA 2026 Primary Voter Guide',
+      chapterId: 'california-dsa',
+      electionId: '2026-ca-primary',
+      sourceUrl: 'https://www.californiadsa.org/voterguide',
+      confidence: 'official_source',
+      summary: 'Statewide guide and local chapter guide hub for California DSA electoral recommendations.',
+    },
+    {
+      id: 'dsa-san-diego-2026-primary-guide',
+      title: "DSA San Diego's June 2026 Primary Voter Guide",
+      chapterId: 'dsa-san-diego',
+      electionId: '2026-ca-primary',
+      sourceUrl: 'https://dsasandiego.org/dsa-san-diegos-june-2026-primary-voter-guide/',
+      confidence: 'official_source',
+      publishedAt: '2026-05-05',
+      summary: 'Local voter guide with federal, statewide, local, and ballot measure recommendations.',
+    },
+  ],
+  endorsements: [
+    {
+      id: 'contreras-dsa-sd-2026-primary',
+      candidateId: 'corinna-contreras',
+      raceId: 'ca-48-us-house-2026-primary',
+      chapterId: 'dsa-san-diego',
+      voterGuideId: 'dsa-san-diego-2026-primary-guide',
+      endorsementType: 'recommended',
+      sourceUrl: 'https://dsasandiego.org/dsa-san-diegos-june-2026-primary-voter-guide/',
+      sourceDate: '2026-05-05',
+      confidence: 'official_source',
+      notes: 'Seeded from DSA San Diego voter guide wording; preserve recommendation language.',
+    },
+    {
+      id: 'mitra-dsa-sd-2026-primary',
+      candidateId: 'aishwarya-sparky-mitra',
+      raceId: 'ca-50-us-house-2026-primary',
+      chapterId: 'dsa-san-diego',
+      voterGuideId: 'dsa-san-diego-2026-primary-guide',
+      endorsementType: 'recommended',
+      sourceUrl: 'https://dsasandiego.org/dsa-san-diegos-june-2026-primary-voter-guide/',
+      sourceDate: '2026-05-05',
+      confidence: 'official_source',
+      notes: 'Seeded from DSA San Diego voter guide wording; preserve recommendation language.',
+    },
+  ],
+  ballotMeasures: [
+    {
+      id: 'san-diego-measure-a-2026-primary',
+      electionId: '2026-ca-primary',
+      title: 'San Diego Measure A',
+      jurisdiction: 'San Diego, CA',
+      measureNumber: 'A',
+      summary: 'Local ballot measure included in DSA San Diego voter guide seed data.',
+    },
+  ],
+  measurePositions: [
+    {
+      id: 'san-diego-measure-a-dsa-sd-yes-2026-primary',
+      measureId: 'san-diego-measure-a-2026-primary',
+      chapterId: 'dsa-san-diego',
+      position: 'yes',
+      sourceUrl: 'https://dsasandiego.org/dsa-san-diegos-june-2026-primary-voter-guide/',
+      confidence: 'official_source',
+    },
+  ],
+};

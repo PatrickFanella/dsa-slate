@@ -1,8 +1,34 @@
-# Go + Vite React TypeScript + Postgres + Docker Template
+# DSA Slate
 
-Full-stack template with Go backend, Vite React TypeScript Tailwind frontend, Postgres, Docker Compose, and Open Pilot conventions.
+Public, source-linked election guide for DSA electoral work.
 
-Created from `subculture-collective/project-template`.
+DSA Slate helps people find DSA-endorsed candidates, ballot measures, and voter guides across national, state, and local elections. The project starts as a verified directory with source links before adding address-based lookup or results automation.
+
+## Product direction
+
+Core promise:
+
+> Find every DSA-endorsed candidate, ballot measure, and voter guide — national, state, and local — in one searchable place.
+
+First trusted-directory slice:
+
+- homepage and static public directory browsing
+- California-cluster seed data
+- candidate recommendation, ballot measure, and voter guide cards
+- source URLs, source dates, and confidence labels on every public item
+- manual seed-file workflow with documented editorial rules
+- no raw voter address storage
+
+Out of scope for the first launch: address lookup, admin UI, public submissions, live election-night results, campaign coordination, address storage, and automated nationwide scraping.
+
+## Stack
+
+- Go backend
+- Vite React TypeScript frontend
+- PostgreSQL
+- Docker Compose
+- Makefile-based verification
+- Open Pilot issue and PR conventions
 
 ## Quick start
 
@@ -10,13 +36,24 @@ Created from `subculture-collective/project-template`.
 make verify
 ```
 
+Useful local commands:
+
+```bash
+make db-up          # start Postgres
+make migrate        # apply SQL migrations
+make dev-web        # start Vite locally
+make dev            # start DB, migrate, then run Vite
+make containers-up  # build and run Postgres, API, and web containers
+make logs           # follow compose logs
+```
+
 ## Open Pilot
 
 This repository keeps the base Open Pilot issue template and PR template.
-Bootstrap labels after creating a repo from this template:
+Bootstrap labels after creating the repository:
 
 ```bash
-open-pilot labels bootstrap subculture-collective/project-template-go-vite-react-ts-postgres-docker
+open-pilot labels bootstrap subculture-collective/dsa-slate
 ```
 
 ## License

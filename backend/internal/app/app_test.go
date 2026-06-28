@@ -2,8 +2,8 @@ package app
 
 import "testing"
 
-func TestGreeting(t *testing.T) {
-	if got := Greeting("SUBCULT"); got != "Hello, SUBCULT!" {
-		t.Fatalf("unexpected greeting: %s", got)
+func TestServiceName(t *testing.T) {
+	if got := ServiceName(); got != "dsa-slate" {
+		t.Fatalf("unexpected service name: %s", got)
 	}
 }

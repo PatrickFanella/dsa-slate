@@ -1,11 +1,7 @@
 package app
 
-import "strings"
+const serviceName = "dsa-slate"
 
-func Greeting(name string) string {
-	name = strings.TrimSpace(name)
-	if name == "" {
-		name = "world"
-	}
-	return "Hello, " + name + "!"
+func ServiceName() string {
+	return serviceName
 }

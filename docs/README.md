@@ -10,7 +10,6 @@ This directory is the current project knowledge base.
 - `runbooks/` — repeatable operational procedures
 - `labels.md` — Open Pilot label lifecycle
 - `open-pilot.md` — how to prepare issues for Open Pilot
-- `stacks.md` — how to derive stack-specific templates from this base
-- `template-maintenance.md` — how to maintain this base and propagate changes
+- `product.md` — DSA Slate product requirements and MVP scope
 
 Keep docs current, concise, and linked from this hub.

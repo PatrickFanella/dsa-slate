@@ -1,13 +1,15 @@
 # Agent Instructions
 
-This repository is a Go full-stack with Vite React TypeScript, Postgres, and Docker template derived from `subculture-collective/project-template`.
+This repository is DSA Slate: a Go full-stack application with Vite React TypeScript, Postgres, and Docker for a source-linked DSA electoral guide.
 
 ## Priorities
 
-1. Keep the template runnable and minimal.
+1. Keep the application runnable and minimal.
 2. Preserve Open Pilot issue and PR templates.
 3. Keep generated caches, secrets, and local data out of git.
-4. Update this file and `README.md` when stack conventions change.
+4. Keep endorsement data source-linked with clear confidence labels.
+5. Do not store raw voter addresses unless a future feature explicitly adds opt-in handling and a privacy review.
+6. Update this file and `README.md` when stack conventions change.
 
 ## Verification
 

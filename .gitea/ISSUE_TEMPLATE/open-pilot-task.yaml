@@ -18,7 +18,7 @@ body:
     attributes:
       label: Goal
       description: One concrete outcome Open Pilot should produce.
-      placeholder: "Add docs/reference/postgres.md with local database setup notes."
+      placeholder: "Add a source-linked chapter page for DSA San Diego."
     validations:
       required: true
 
@@ -28,8 +28,8 @@ body:
       label: Context
       description: Links, files, existing behavior, constraints, and any product or domain background needed.
       placeholder: |
-        - Relevant files: README.md, docs/stacks.md
-        - Keep this docs-only; do not add application scaffolding.
+        - Relevant files: docs/product.md, web/src/App.tsx, migrations/0001_init.sql
+        - Keep endorsement data source-linked and do not store raw voter addresses.
     validations:
       required: true
 
