@@ -9,7 +9,11 @@ describe('App', () => {
     const html = renderToString(<App />);
 
     expect(html).toContain('Find your DSA slate');
-    expect(html).toContain('California cluster');
+    expect(html).toContain('Voter guides');
+    expect(html).toContain('Search the trusted directory');
+    expect(html).toContain('Text search only — not address lookup. Raw addresses are not stored.');
+    expect(html).toContain('aria-live="polite"');
+    expect(html).not.toContain('disabled');
     expect(html).toContain('Corinna Contreras');
     expect(html).toContain('Recommended');
     expect(html).toContain('Official source');
