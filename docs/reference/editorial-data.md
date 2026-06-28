@@ -36,3 +36,18 @@ The trusted-directory MVP does not store voter addresses. Search is static text 
 - Add source date when visible.
 - Add notes for ambiguity rather than upgrading confidence.
 - Run `make verify` before merging seed changes.
+
+## Automated seed validation
+
+`web/src/data/schema.ts` enforces local metadata integrity for checked-in seed data.
+
+The validator rejects:
+
+- duplicate IDs within any collection
+- missing `sourceUrl` on voter guides, endorsements, and measure positions
+- voter guides without `chapterId` context
+- non-HTTP(S) source, website, official, campaign, or photo URLs
+- non-ISO dates; use `YYYY-MM-DD`
+- references to missing chapters, elections, races, candidates, voter guides, or ballot measures
+
+The validator does not prove that an endorsement is true, current, or legally usable. Human review still must confirm that the source page is public, official enough for its confidence label, and quoted without upgrading “recommended” to “endorsed.”

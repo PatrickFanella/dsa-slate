@@ -1,10 +1,11 @@
 import { EndorsementCard, MeasureCard, VoterGuideCard } from './components/DirectoryCard';
-import { directoryData, getEndorsementCards, getMeasureCards, getVoterGuideCards } from './data';
+import { buildDirectoryCards, directoryData } from './data';
 import type { ReactNode } from 'react';
 
-const endorsementCards = getEndorsementCards();
-const measureCards = getMeasureCards();
-const voterGuideCards = getVoterGuideCards();
+const directoryCards = buildDirectoryCards(directoryData);
+const endorsementCards = directoryCards.endorsements;
+const measureCards = directoryCards.measures;
+const voterGuideCards = directoryCards.voterGuides;
 
 export default function App() {
   return (
