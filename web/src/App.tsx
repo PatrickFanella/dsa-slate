@@ -4,10 +4,43 @@ import { buildDirectoryCards } from './data';
 import { filterDirectoryCards } from './data/filter';
 import { useDirectoryData, type DirectoryLoadStatus } from './data/useDirectoryData';
 import type { ReactNode } from 'react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+
+type ThemeMode = 'light' | 'dark';
+
+const THEME_STORAGE_KEY = 'dsa-slate-theme';
+
+function readStoredTheme(): ThemeMode | null {
+  try {
+    const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+
+    return storedTheme === 'dark' || storedTheme === 'light' ? storedTheme : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredTheme(theme: ThemeMode) {
+  try {
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+  } catch {
+    // Ignore storage failures and keep the UI functional.
+  }
+}
+
+function getInitialTheme(): ThemeMode {
+  if (typeof window === 'undefined') {
+    return 'light';
+  }
+
+  const storedTheme = readStoredTheme();
+
+  return storedTheme ?? 'light';
+}
 
 export default function App() {
   const [query, setQuery] = useState('');
+  const [theme, setTheme] = useState<ThemeMode>(() => getInitialTheme());
   const directoryState = useDirectoryData();
 
   const directoryCards = useMemo(() => buildDirectoryCards(directoryState.data), [directoryState.data]);
@@ -20,45 +53,67 @@ export default function App() {
   const hasResults = visibleResultCount > 0;
   const noVisibleResults = !hasResults;
 
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    writeStoredTheme(theme);
+  }, [theme]);
+
+  const nextTheme = theme === 'light' ? 'dark' : 'light';
+
   return (
-    <main className="min-h-screen bg-red-950 px-6 py-10 text-rose-50">
+    <main className="min-h-screen bg-background px-6 py-10 text-foreground">
       <section className="mx-auto flex max-w-6xl flex-col gap-10">
-        <header className="rounded-3xl border border-red-800/70 bg-red-950/60 p-8 shadow-2xl shadow-red-950/50 md:p-12">
-          <p className="text-sm font-semibold uppercase tracking-[0.35em] text-rose-300">DSA Slate</p>
-          <h1 className="mt-4 text-4xl font-black tracking-tight text-white md:text-6xl">Find your DSA slate</h1>
-          <p className="mt-5 max-w-3xl text-lg leading-8 text-rose-100/85">
-            A source-linked election guide for DSA endorsements, recommendations, ballot measures, and voter guides
-            from national, state, and local chapters.
-          </p>
+        <header className="rounded-none border-2 border-border-strong bg-surface p-8 shadow-[10px_10px_0_var(--theme-shadow)] md:p-12">
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-4xl">
+              <p className="text-sm font-black uppercase tracking-[0.28em] text-primary">DSA Slate</p>
+              <h1 className="mt-4 font-display text-4xl font-black tracking-tight text-foreground md:text-6xl">
+                Find your DSA slate
+              </h1>
+              <p className="mt-5 max-w-3xl text-lg leading-8 text-muted">
+                A source-linked election guide for DSA endorsements, recommendations, ballot measures, and voter guides
+                from national, state, and local chapters.
+              </p>
+            </div>
+            <button
+              aria-label={`Switch to ${nextTheme} theme`}
+              className="inline-flex flex-col items-start gap-1 rounded-none border-2 border-border-strong bg-surface-muted px-4 py-3 text-left shadow-[4px_4px_0_var(--theme-shadow)] transition hover:-translate-y-0.5 hover:bg-surface-accent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              type="button"
+              onClick={() => setTheme(nextTheme)}
+            >
+              <span className="text-[0.65rem] font-black uppercase tracking-[0.28em] text-muted">Theme</span>
+              <span className="text-sm font-black text-foreground">{theme === 'light' ? 'Light' : 'Dark'} theme</span>
+            </button>
+          </div>
           <div className="mt-6 flex flex-wrap gap-3">
             <a
-              className="rounded-xl border border-rose-200/30 bg-rose-100 px-5 py-3 font-bold text-red-950 transition hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200 focus-visible:ring-offset-2 focus-visible:ring-offset-red-950"
+              className="rounded-none border-2 border-primary bg-primary px-5 py-3 font-black text-primary-foreground transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               href="#methodology"
             >
               Methodology & disclaimer
             </a>
           </div>
-          <div className="mt-8 grid gap-3 rounded-2xl border border-red-800 bg-red-900/40 p-4 md:grid-cols-[1fr_auto]">
+          <div className="mt-8 grid gap-3 rounded-none border-2 border-border bg-surface-muted p-4 md:grid-cols-[1fr_auto]">
             <label className="sr-only" htmlFor="slate-search">
               Text search candidates, chapters, offices, elections, or voter guides
             </label>
             <input
               id="slate-search"
-              className="rounded-xl border border-red-700 bg-red-950 px-4 py-3 text-rose-50 placeholder:text-rose-200/60 transition focus-visible:border-rose-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200 focus-visible:ring-offset-2 focus-visible:ring-offset-red-950"
+              className="rounded-none border-2 border-border-strong bg-surface px-4 py-3 text-foreground placeholder:text-muted transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search this source-linked directory"
               type="search"
               value={query}
             />
             <button
-              className="rounded-xl bg-rose-100 px-6 py-3 font-bold text-red-950 transition hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200 focus-visible:ring-offset-2 focus-visible:ring-offset-red-950"
+              className="rounded-none border-2 border-border-strong bg-surface px-6 py-3 font-black text-foreground transition hover:bg-surface-accent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               type="button"
               onClick={() => setQuery('')}
             >
               Clear
             </button>
           </div>
-          <div className="mt-3 flex flex-col gap-2 text-sm leading-6 text-rose-100/70 md:flex-row md:items-center md:justify-between">
+          <div className="mt-3 flex flex-col gap-2 text-sm leading-6 text-muted md:flex-row md:items-center md:justify-between">
             <p>Text search only — not address lookup. Raw addresses are not stored.</p>
             <p aria-live="polite">{visibleResultCount} visible {visibleResultCount === 1 ? 'result' : 'results'}</p>
           </div>
@@ -141,12 +196,12 @@ function DirectorySection({
   title: string;
 }) {
   return (
-    <section className="rounded-3xl border border-red-800/70 bg-red-950/50 p-6 md:p-8">
+    <section className="rounded-none border-2 border-border-strong bg-surface p-6 shadow-[6px_6px_0_var(--theme-shadow)] md:p-8">
       <div className="mb-5">
-        <h2 className="text-2xl font-black text-white">
-          {title} <span className="text-rose-200/70">({count})</span>
+        <h2 className="text-2xl font-black text-foreground">
+          {title} <span className="text-muted">({count})</span>
         </h2>
-        <p className="mt-2 text-sm leading-6 text-rose-100/70">{description}</p>
+        <p className="mt-2 text-sm leading-6 text-muted">{description}</p>
       </div>
       {children}
     </section>
@@ -155,17 +210,17 @@ function DirectorySection({
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <article className="rounded-2xl border border-red-800 bg-red-900/30 p-5">
-      <p className="text-sm font-semibold uppercase tracking-wide text-rose-200/80">{label}</p>
-      <p className="mt-2 text-4xl font-black text-white">{value}</p>
+    <article className="rounded-none border-2 border-border bg-surface-muted p-5 shadow-[4px_4px_0_var(--theme-shadow)]">
+      <p className="text-sm font-black uppercase tracking-wide text-primary">{label}</p>
+      <p className="mt-2 text-4xl font-black text-foreground">{value}</p>
     </article>
   );
 }
 
 function EmptyStateCard({ message }: { message: string }) {
   return (
-    <article className="rounded-2xl border border-dashed border-red-700 bg-red-950/40 p-6 text-rose-100/80">
-      <h3 className="text-lg font-black text-white">No matches yet</h3>
+    <article className="rounded-none border-2 border-dashed border-border-strong bg-surface-muted p-6 text-muted">
+      <h3 className="text-lg font-black text-foreground">No matches yet</h3>
       <p className="mt-2 text-sm leading-6">{message}</p>
     </article>
   );
@@ -190,8 +245,8 @@ function DirectoryDataStatus({ errorMessage, status }: { errorMessage?: string; 
   };
 
   return (
-    <p className="mt-2 rounded-xl border border-red-800 bg-red-900/30 px-4 py-3 text-sm leading-6 text-rose-100/75">
-      <span className="font-bold text-rose-50">{copy[status].label}.</span> {copy[status].detail}
+    <p className="mt-2 rounded-none border-2 border-border bg-surface-muted px-4 py-3 text-sm leading-6 text-muted">
+      <span className="font-bold text-foreground">{copy[status].label}.</span> {copy[status].detail}
     </p>
   );
 }

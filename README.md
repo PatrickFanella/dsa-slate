@@ -56,6 +56,9 @@ For the API-backed frontend flow, run `make seed` or `make dev-full` first so th
 ## Development / API
 
 Read API contract: `docs/reference/api.md`.
+Design reference: `docs/reference/design.md`.
+The frontend uses official DSA palette tokens mapped into Tailwind v4 semantic utilities in `web/src/styles.css`.
+The public UI includes a light/dark theme toggle driven by `data-theme` on `document.documentElement`.
 
 Recommended feature order: stabilize the read API and seed data first, then build frontend screens against that contract. Avoid frontend-only data shapes that diverge from the Go API DTOs.
 

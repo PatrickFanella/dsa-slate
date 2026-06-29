@@ -14,17 +14,20 @@ type SourceBadgeProps = {
 
 export function SourceBadge({ confidence, endorsementType, sourceUrl, sourceDate }: SourceBadgeProps) {
   return (
-    <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide">
+    <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-black uppercase tracking-wide">
       {endorsementType ? (
-        <span className="rounded-full bg-rose-100 px-3 py-1 text-red-950">
+        <span className="rounded-none border-2 border-primary bg-primary px-3 py-1 text-primary-foreground shadow-[2px_2px_0_var(--theme-shadow)]">
           {endorsementTypeLabel(endorsementType)}
         </span>
       ) : null}
-      <span className="rounded-full border border-red-600 px-3 py-1 text-rose-100">
+      <span className="rounded-none border-2 border-border-strong bg-surface px-3 py-1 text-foreground shadow-[2px_2px_0_var(--theme-shadow)]">
         {confidenceLabel(confidence)}
       </span>
-      {sourceDate ? <span className="text-rose-200/70">Source date: {sourceDate}</span> : null}
-      <a className="text-rose-100 underline decoration-rose-300 underline-offset-4" href={sourceUrl}>
+      {sourceDate ? <span className="text-muted">Source date: {sourceDate}</span> : null}
+      <a
+        className="text-link underline decoration-2 underline-offset-4 hover:text-primary-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        href={sourceUrl}
+      >
         Original source
       </a>
     </div>

@@ -1,6 +1,115 @@
 @import "tailwindcss";
 
 :root {
+  font-family: "Styrene B", "Manifold DSA", system-ui, sans-serif;
+
+  --dsa-red: #ec1f27;
+  --dsa-red-tint-1: #f04c53;
+  --dsa-red-tint-2: #f4797e;
+  --dsa-red-tint-3: #f7a5a9;
+  --dsa-red-tint-4: #fbd2d4;
+
+  --dsa-black: #231f20;
+  --dsa-black-tint-1: #3b3838;
+  --dsa-black-tint-2: #605c5c;
+  --dsa-black-tint-3: #8c8989;
+  --dsa-black-tint-4: #c1c0bf;
+  --dsa-white: #ffffff;
+
+  color-scheme: light;
+  --theme-background: var(--dsa-white);
+  --theme-foreground: var(--dsa-black);
+  --theme-surface: var(--dsa-white);
+  --theme-surface-muted: var(--dsa-red-tint-4);
+  --theme-surface-accent: var(--dsa-red-tint-4);
+  --theme-border: var(--dsa-black-tint-4);
+  --theme-border-strong: var(--dsa-black);
+  --theme-muted: var(--dsa-black-tint-2);
+  --theme-primary: var(--dsa-red);
+  --theme-primary-hover: var(--dsa-black);
+  --theme-primary-foreground: var(--dsa-white);
+  --theme-focus: var(--dsa-red);
+  --theme-link: var(--dsa-red);
+  --theme-trust-official: var(--dsa-red);
+  --theme-trust-review: var(--dsa-black-tint-2);
+  --theme-shadow: var(--dsa-black-tint-4);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --theme-background: var(--dsa-white);
+  --theme-foreground: var(--dsa-black);
+  --theme-surface: var(--dsa-white);
+  --theme-surface-muted: var(--dsa-red-tint-4);
+  --theme-surface-accent: var(--dsa-red-tint-4);
+  --theme-border: var(--dsa-black-tint-4);
+  --theme-border-strong: var(--dsa-black);
+  --theme-muted: var(--dsa-black-tint-2);
+  --theme-primary: var(--dsa-red);
+  --theme-primary-hover: var(--dsa-black);
+  --theme-primary-foreground: var(--dsa-white);
+  --theme-focus: var(--dsa-red);
+  --theme-link: var(--dsa-red);
+  --theme-trust-official: var(--dsa-red);
+  --theme-trust-review: var(--dsa-black-tint-2);
+  --theme-shadow: var(--dsa-black-tint-4);
+}
+
+:root[data-theme='dark'] {
   color-scheme: dark;
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  --theme-background: var(--dsa-black);
+  --theme-foreground: var(--dsa-white);
+  --theme-surface: var(--dsa-black-tint-1);
+  --theme-surface-muted: var(--dsa-black-tint-2);
+  --theme-surface-accent: var(--dsa-black-tint-3);
+  --theme-border: var(--dsa-black-tint-3);
+  --theme-border-strong: var(--dsa-red-tint-2);
+  --theme-muted: var(--dsa-black-tint-4);
+  --theme-primary: var(--dsa-red);
+  --theme-primary-hover: var(--dsa-red-tint-1);
+  --theme-primary-foreground: var(--dsa-white);
+  --theme-focus: var(--dsa-red-tint-2);
+  --theme-link: var(--dsa-red-tint-2);
+  --theme-trust-official: var(--dsa-red-tint-1);
+  --theme-trust-review: var(--dsa-black-tint-4);
+  --theme-shadow: var(--dsa-red-tint-2);
+}
+
+@theme inline {
+  --font-sans: "Styrene B", "Manifold DSA", system-ui, sans-serif;
+  --font-display: "Manifold DSA", "Styrene B", system-ui, sans-serif;
+
+  --color-background: var(--theme-background);
+  --color-foreground: var(--theme-foreground);
+  --color-surface: var(--theme-surface);
+  --color-surface-muted: var(--theme-surface-muted);
+  --color-surface-accent: var(--theme-surface-accent);
+  --color-border: var(--theme-border);
+  --color-border-strong: var(--theme-border-strong);
+  --color-muted: var(--theme-muted);
+  --color-primary: var(--theme-primary);
+  --color-primary-hover: var(--theme-primary-hover);
+  --color-primary-foreground: var(--theme-primary-foreground);
+  --color-focus: var(--theme-focus);
+  --color-link: var(--theme-link);
+  --color-trust-official: var(--theme-trust-official);
+  --color-trust-review: var(--theme-trust-review);
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: var(--theme-background);
+  color: var(--theme-foreground);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+a {
+  color: inherit;
 }

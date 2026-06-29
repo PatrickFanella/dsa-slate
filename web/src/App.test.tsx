@@ -9,6 +9,13 @@ describe('App', () => {
     const html = renderToString(<App />);
 
     expect(html).toContain('Find your DSA slate');
+    expect(html).toContain('bg-background');
+    expect(html).toContain('text-foreground');
+    expect(html).toContain('rounded-none');
+    expect(html).toContain('shadow-[10px_10px_0_var(--theme-shadow)]');
+    expect(html).toContain('bg-primary');
+    expect(html).toContain('Switch to dark theme');
+    expect(html).toMatch(/Light.*theme/);
     expect(html).toContain('How this directory is built');
     expect(html).toContain('Voter guides');
     expect(html).toContain('Search this source-linked directory');

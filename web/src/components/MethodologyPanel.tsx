@@ -2,14 +2,11 @@ import type { ReactNode } from 'react';
 
 export function MethodologyPanel() {
   return (
-    <section
-      id="methodology"
-      className="rounded-3xl border border-red-800/70 bg-red-950/50 p-6 md:p-8"
-    >
+    <section id="methodology" className="rounded-none border-2 border-border-strong bg-surface-muted p-6 shadow-[6px_6px_0_var(--theme-shadow)] md:p-8">
       <div className="max-w-4xl">
-        <p className="text-sm font-semibold uppercase tracking-[0.35em] text-rose-300">Methodology & disclaimer</p>
-        <h2 className="mt-3 text-3xl font-black text-white md:text-4xl">How this directory is built</h2>
-        <p className="mt-4 text-base leading-7 text-rose-100/80">
+        <p className="text-sm font-black uppercase tracking-[0.28em] text-primary">Methodology & disclaimer</p>
+        <h2 className="mt-3 font-display text-3xl font-black text-foreground md:text-4xl">How this directory is built</h2>
+        <p className="mt-4 text-base leading-7 text-muted">
           DSA Slate uses manual, source-linked records. Each public record is recorded from a public chapter, state,
           national, press, campaign, or verified social source and then reviewed by hand before it is published.
         </p>
@@ -21,17 +18,17 @@ export function MethodologyPanel() {
             original source.
           </MethodologyItem>
           <MethodologyItem title="Confidence labels">
-            <span className="font-semibold text-white">official_source</span> means recorded from an official DSA
-            website or page. <span className="font-semibold text-white">official_social_source</span> means recorded
-            from an official DSA social account. <span className="font-semibold text-white">campaign_source</span>{' '}
+            <span className="font-semibold text-foreground">official_source</span> means recorded from an official DSA
+            website or page. <span className="font-semibold text-foreground">official_social_source</span> means recorded
+            from an official DSA social account. <span className="font-semibold text-foreground">campaign_source</span>{' '}
             means recorded from a candidate or campaign claim and flagged for manual review.{' '}
-            <span className="font-semibold text-white">press_source</span> means recorded from a press report and
-            flagged for manual review. <span className="font-semibold text-white">needs_review</span> means the source
+            <span className="font-semibold text-foreground">press_source</span> means recorded from a press report and
+            flagged for manual review. <span className="font-semibold text-foreground">needs_review</span> means the source
             is unclear, incomplete, or still needs human confirmation.
           </MethodologyItem>
           <MethodologyItem title="Endorsement wording">
-            We do not collapse <span className="font-semibold text-white">recommended</span> into{' '}
-            <span className="font-semibold text-white">endorsed</span>. The public label stays as the original source
+            We do not collapse <span className="font-semibold text-foreground">recommended</span> into{' '}
+            <span className="font-semibold text-foreground">endorsed</span>. The public label stays as the original source
             used it.
           </MethodologyItem>
           <MethodologyItem title="Privacy">
@@ -50,9 +47,9 @@ export function MethodologyPanel() {
 
 function MethodologyItem({ children, title }: { children: ReactNode; title: string }) {
   return (
-    <article className="rounded-2xl border border-red-800 bg-red-900/30 p-5">
-      <h3 className="text-lg font-black text-white">{title}</h3>
-      <p className="mt-2 text-sm leading-6 text-rose-100/75">{children}</p>
+    <article className="rounded-none border-2 border-border bg-surface p-5 shadow-[4px_4px_0_var(--theme-shadow)]">
+      <h3 className="text-lg font-black text-foreground">{title}</h3>
+      <p className="mt-2 text-sm leading-6 text-muted">{children}</p>
     </article>
   );
 }
