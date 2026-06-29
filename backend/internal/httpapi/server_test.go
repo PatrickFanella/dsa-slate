@@ -59,7 +59,16 @@ func TestDirectoryEmptyCollectionsAreArrays(t *testing.T) {
 
 func TestDirectoryUsesCamelCaseFieldNames(t *testing.T) {
 	handler := NewServer(directory.NewMemoryStore(directory.DirectoryData{
-		Chapters: []directory.Chapter{{ID: "chap-1", Name: "Chapter 1", State: "CA", Active: false}},
+		Chapters: []directory.Chapter{{
+			ID:               "chap-1",
+			Name:             "Chapter 1",
+			State:            "CA",
+			Status:           "Chapter",
+			GroupEmail:       "chapter@example.org",
+			InstagramURL:     "https://www.instagram.com/chapter",
+			EventCalendarURL: "https://example.org/calendar",
+			Active:           false,
+		}},
 		VoterGuides: []directory.VoterGuide{{
 			ID:          "guide-1",
 			Title:       "Guide 1",
@@ -128,6 +137,15 @@ func TestDirectoryUsesCamelCaseFieldNames(t *testing.T) {
 	chapter := chapters[0].(map[string]any)
 	if active, ok := chapter["active"].(bool); !ok || active {
 		t.Fatalf("active = %#v, want false", chapter["active"])
+	}
+	if got := chapter["groupEmail"]; got != "chapter@example.org" {
+		t.Fatalf("groupEmail = %#v, want chapter@example.org", got)
+	}
+	if _, ok := chapter["group_email"]; ok {
+		t.Fatalf("unexpected snake_case group_email in chapter: %#v", chapter)
+	}
+	if got := chapter["eventCalendarUrl"]; got != "https://example.org/calendar" {
+		t.Fatalf("eventCalendarUrl = %#v, want https://example.org/calendar", got)
 	}
 
 	candidates := got["candidates"].([]any)

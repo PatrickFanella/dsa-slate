@@ -26,6 +26,16 @@ export type Chapter = {
   websiteUrl?: string;
   officialDsaUrl?: string;
   coverageNotes?: string;
+  status?: string;
+  groupEmail?: string;
+  linktreeUrl?: string;
+  facebookUrl?: string;
+  twitterUrl?: string;
+  blueskyUrl?: string;
+  instagramUrl?: string;
+  blogUrl?: string;
+  eventCalendarUrl?: string;
+  emailListUrl?: string;
   active?: boolean;
 };
 
@@ -258,6 +268,14 @@ export function validateDirectoryData(data: DirectoryData): string[] {
   for (const chapter of data.chapters) {
     validateOptionalUrl(`chapters[${chapter.id}]`, 'websiteUrl', chapter.websiteUrl, errors);
     validateOptionalUrl(`chapters[${chapter.id}]`, 'officialDsaUrl', chapter.officialDsaUrl, errors);
+    validateOptionalUrl(`chapters[${chapter.id}]`, 'linktreeUrl', chapter.linktreeUrl, errors);
+    validateOptionalUrl(`chapters[${chapter.id}]`, 'facebookUrl', chapter.facebookUrl, errors);
+    validateOptionalUrl(`chapters[${chapter.id}]`, 'twitterUrl', chapter.twitterUrl, errors);
+    validateOptionalUrl(`chapters[${chapter.id}]`, 'blueskyUrl', chapter.blueskyUrl, errors);
+    validateOptionalUrl(`chapters[${chapter.id}]`, 'instagramUrl', chapter.instagramUrl, errors);
+    validateOptionalUrl(`chapters[${chapter.id}]`, 'blogUrl', chapter.blogUrl, errors);
+    validateOptionalUrl(`chapters[${chapter.id}]`, 'eventCalendarUrl', chapter.eventCalendarUrl, errors);
+    validateOptionalUrl(`chapters[${chapter.id}]`, 'emailListUrl', chapter.emailListUrl, errors);
   }
 
   for (const election of data.elections) {

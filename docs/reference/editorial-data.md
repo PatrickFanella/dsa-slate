@@ -53,6 +53,10 @@ Until a reviewed admin API exists, all public records are added through reviewed
 
 The data-quality command is a metadata check, not a truth oracle. Human review still decides whether a source is official enough and whether a record should be published.
 
+## Chapter directory import
+
+The national chapter directory was imported once from a CSV snapshot into `seeds/chapters.sql`. Do not add runtime CSV parsing. Future chapter updates should edit database seed rows or a reviewed admin workflow so Postgres remains the source the API reads.
+
 ## Editorial review metadata
 
 Source-bearing public records may include:

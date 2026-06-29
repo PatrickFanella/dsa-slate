@@ -41,13 +41,23 @@ type Store interface {
 }
 
 type Chapter struct {
-	ID             string `json:"id"`
-	Name           string `json:"name"`
-	State          string `json:"state"`
-	WebsiteURL     string `json:"websiteUrl,omitempty"`
-	OfficialDSAURL string `json:"officialDsaUrl,omitempty"`
-	CoverageNotes  string `json:"coverageNotes,omitempty"`
-	Active         bool   `json:"active"`
+	ID               string `json:"id"`
+	Name             string `json:"name"`
+	State            string `json:"state"`
+	WebsiteURL       string `json:"websiteUrl,omitempty"`
+	OfficialDSAURL   string `json:"officialDsaUrl,omitempty"`
+	CoverageNotes    string `json:"coverageNotes,omitempty"`
+	Status           string `json:"status,omitempty"`
+	GroupEmail       string `json:"groupEmail,omitempty"`
+	LinktreeURL      string `json:"linktreeUrl,omitempty"`
+	FacebookURL      string `json:"facebookUrl,omitempty"`
+	TwitterURL       string `json:"twitterUrl,omitempty"`
+	BlueskyURL       string `json:"blueskyUrl,omitempty"`
+	InstagramURL     string `json:"instagramUrl,omitempty"`
+	BlogURL          string `json:"blogUrl,omitempty"`
+	EventCalendarURL string `json:"eventCalendarUrl,omitempty"`
+	EmailListURL     string `json:"emailListUrl,omitempty"`
+	Active           bool   `json:"active"`
 }
 
 type Election struct {

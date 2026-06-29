@@ -36,7 +36,7 @@ All empty collections are JSON arrays, not `null`.
 
 ## Collection endpoints
 
-- `GET /api/chapters`
+- `GET /api/chapters` — all known DSA chapters, including optional public contact and social fields when present.
 - `GET /api/elections`
 - `GET /api/races?electionId=<id>&jurisdiction=<name>&level=<level>`
 - `GET /api/candidates`

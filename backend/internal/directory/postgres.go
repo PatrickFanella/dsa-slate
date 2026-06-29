@@ -113,7 +113,7 @@ func (s *PostgresStore) MeasurePositions(ctx context.Context, filter MeasurePosi
 
 func (s *PostgresStore) chapters(ctx context.Context) ([]Chapter, error) {
 	rows, err := s.pool.Query(ctx, `
-		SELECT id, name, state, website_url, official_dsa_url, coverage_notes, active
+		SELECT id, name, state, website_url, official_dsa_url, coverage_notes, status, group_email, linktree_url, facebook_url, twitter_url, bluesky_url, instagram_url, blog_url, event_calendar_url, email_list_url, active
 		FROM chapters
 		ORDER BY id
 	`)
@@ -125,16 +125,26 @@ func (s *PostgresStore) chapters(ctx context.Context) ([]Chapter, error) {
 	chapters := make([]Chapter, 0)
 	for rows.Next() {
 		var (
-			id             sql.NullString
-			name           sql.NullString
-			state          sql.NullString
-			websiteURL     sql.NullString
-			officialDSAURL sql.NullString
-			coverageNotes  sql.NullString
-			active         sql.NullBool
+			id               sql.NullString
+			name             sql.NullString
+			state            sql.NullString
+			websiteURL       sql.NullString
+			officialDSAURL   sql.NullString
+			coverageNotes    sql.NullString
+			status           sql.NullString
+			groupEmail       sql.NullString
+			linktreeURL      sql.NullString
+			facebookURL      sql.NullString
+			twitterURL       sql.NullString
+			blueskyURL       sql.NullString
+			instagramURL     sql.NullString
+			blogURL          sql.NullString
+			eventCalendarURL sql.NullString
+			emailListURL     sql.NullString
+			active           sql.NullBool
 		)
 
-		if err := rows.Scan(&id, &name, &state, &websiteURL, &officialDSAURL, &coverageNotes, &active); err != nil {
+		if err := rows.Scan(&id, &name, &state, &websiteURL, &officialDSAURL, &coverageNotes, &status, &groupEmail, &linktreeURL, &facebookURL, &twitterURL, &blueskyURL, &instagramURL, &blogURL, &eventCalendarURL, &emailListURL, &active); err != nil {
 			return nil, fmt.Errorf("scan chapters: %w", err)
 		}
 
@@ -148,13 +158,23 @@ func (s *PostgresStore) chapters(ctx context.Context) ([]Chapter, error) {
 		}
 
 		chapters = append(chapters, Chapter{
-			ID:             chapterID,
-			Name:           chapterName,
-			State:          optionalString(state),
-			WebsiteURL:     optionalString(websiteURL),
-			OfficialDSAURL: optionalString(officialDSAURL),
-			CoverageNotes:  optionalString(coverageNotes),
-			Active:         active.Valid && active.Bool,
+			ID:               chapterID,
+			Name:             chapterName,
+			State:            optionalString(state),
+			WebsiteURL:       optionalString(websiteURL),
+			OfficialDSAURL:   optionalString(officialDSAURL),
+			CoverageNotes:    optionalString(coverageNotes),
+			Status:           optionalString(status),
+			GroupEmail:       optionalString(groupEmail),
+			LinktreeURL:      optionalString(linktreeURL),
+			FacebookURL:      optionalString(facebookURL),
+			TwitterURL:       optionalString(twitterURL),
+			BlueskyURL:       optionalString(blueskyURL),
+			InstagramURL:     optionalString(instagramURL),
+			BlogURL:          optionalString(blogURL),
+			EventCalendarURL: optionalString(eventCalendarURL),
+			EmailListURL:     optionalString(emailListURL),
+			Active:           active.Valid && active.Bool,
 		})
 	}
 	if err := rows.Err(); err != nil {

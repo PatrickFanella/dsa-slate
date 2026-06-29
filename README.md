@@ -41,7 +41,7 @@ Useful local commands:
 ```bash
 make db-up          # start Postgres
 make migrate        # apply SQL migrations
-make seed           # apply the California seed fixture
+make seed           # apply the chapter directory and California seed fixtures
 make dev-web        # start Vite locally; /api proxies to http://localhost:8080
 make dev-api        # run the Go API locally against compose Postgres
 make api-smoke      # curl /healthz and /api/directory on localhost
@@ -63,6 +63,7 @@ The public UI includes a light/dark theme toggle driven by `data-theme` on `docu
 Recommended feature order: stabilize the read API and seed data first, then build frontend screens against that contract. Avoid frontend-only data shapes that diverge from the Go API DTOs.
 
 - Run `make data-quality` after seed edits to check source-linked records against local Postgres before proposing admin/write API work.
+- `make seed` loads the imported DSA chapter directory from `seeds/chapters.sql`, then applies California electoral records from `seeds/california.sql`; runtime code reads Postgres, not the original CSV import source.
 
 ## Open Pilot
 

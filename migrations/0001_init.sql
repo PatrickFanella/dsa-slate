@@ -5,6 +5,16 @@ CREATE TABLE IF NOT EXISTS chapters (
   website_url text,
   official_dsa_url text,
   coverage_notes text,
+  status text,
+  group_email text,
+  linktree_url text,
+  facebook_url text,
+  twitter_url text,
+  bluesky_url text,
+  instagram_url text,
+  blog_url text,
+  event_calendar_url text,
+  email_list_url text,
   active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
@@ -106,6 +116,18 @@ CREATE TABLE IF NOT EXISTS measure_positions (
 
 ALTER TABLE chapters
   ALTER COLUMN state SET NOT NULL;
+
+ALTER TABLE chapters
+  ADD COLUMN IF NOT EXISTS status text,
+  ADD COLUMN IF NOT EXISTS group_email text,
+  ADD COLUMN IF NOT EXISTS linktree_url text,
+  ADD COLUMN IF NOT EXISTS facebook_url text,
+  ADD COLUMN IF NOT EXISTS twitter_url text,
+  ADD COLUMN IF NOT EXISTS bluesky_url text,
+  ADD COLUMN IF NOT EXISTS instagram_url text,
+  ADD COLUMN IF NOT EXISTS blog_url text,
+  ADD COLUMN IF NOT EXISTS event_calendar_url text,
+  ADD COLUMN IF NOT EXISTS email_list_url text;
 
 ALTER TABLE races
   ALTER COLUMN election_id SET NOT NULL,

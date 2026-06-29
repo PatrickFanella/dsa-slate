@@ -5,7 +5,7 @@ COMPOSE := docker compose
 WEB := pnpm --dir web
 
 .PHONY: help verify deps fmt lint test build compose-config open-pilot-check \
-	containers-up containers-down containers-clean logs db-up db-shell migrate db-reset seed data-quality dev-web dev-api api-smoke dev dev-full
+	containers-up containers-down containers-clean logs db-up db-shell migrate db-reset seed-chapters seed data-quality dev-web dev-api api-smoke dev dev-full
 
 help:
 	@awk 'BEGIN {FS = ":.*##"; printf "Commands:\n"} /^[a-zA-Z0-9_-]+:.*##/ {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -60,7 +60,10 @@ db-reset: ## Reset local Postgres volume and rerun migrations
 	$(COMPOSE) down --volumes --remove-orphans
 	$(MAKE) migrate
 
-seed: migrate ## Apply the California seed fixture
+seed-chapters: migrate ## Apply the one-time imported DSA chapter directory seed
+	$(COMPOSE) exec -T postgres psql -v ON_ERROR_STOP=1 -U "$${POSTGRES_USER:-dsa_slate}" -d "$${POSTGRES_DB:-dsa_slate}" < seeds/chapters.sql
+
+seed: migrate seed-chapters ## Apply the chapter directory and California electoral seed fixtures
 	$(COMPOSE) exec -T postgres psql -v ON_ERROR_STOP=1 -U "$${POSTGRES_USER:-dsa_slate}" -d "$${POSTGRES_DB:-dsa_slate}" < seeds/california.sql
 
 data-quality: seed ## Run source-linked data quality checks against local seeded Postgres
