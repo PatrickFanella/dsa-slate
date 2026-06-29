@@ -123,6 +123,81 @@ func TestDirectoryUsesCamelCaseFieldNames(t *testing.T) {
 	}
 }
 
+func TestCollectionEndpointReturnsArrays(t *testing.T) {
+	handler := NewServer(directory.NewMemoryStore(directory.DirectoryData{}))
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/chapters", nil)
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+
+	var got []any
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	if got == nil || len(got) != 0 {
+		t.Fatalf("body = %#v, want empty array", got)
+	}
+}
+
+func TestRacesFilteredByQueryParams(t *testing.T) {
+	handler := NewServer(directory.NewMemoryStore(directory.DirectoryData{
+		Races: []directory.Race{
+			{ID: "race-1", ElectionID: "election-1", Office: "Mayor", Level: "statewide", Jurisdiction: "California"},
+			{ID: "race-2", ElectionID: "election-2", Office: "Governor", Level: "statewide", Jurisdiction: "California"},
+			{ID: "race-3", ElectionID: "election-1", Office: "City Council", Level: "local", Jurisdiction: "California"},
+		},
+	}))
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/races?electionId=election-1&level=statewide&jurisdiction=California", nil)
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+
+	var got []directory.Race
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	if len(got) != 1 {
+		t.Fatalf("len = %d, want 1", len(got))
+	}
+	if got[0].ID != "race-1" {
+		t.Fatalf("race id = %q, want %q", got[0].ID, "race-1")
+	}
+}
+
+func TestInvalidRaceLevel(t *testing.T) {
+	handler := NewServer(directory.NewMemoryStore(directory.DirectoryData{}))
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/races?level=municipal", nil)
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
+	}
+
+	var got map[string]string
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	if got["error"] != "invalid_query" {
+		t.Fatalf("error = %q, want %q", got["error"], "invalid_query")
+	}
+	if got["message"] != "level must be one of federal, statewide, state_legislature, local, unknown" {
+		t.Fatalf("message = %q, want documented validation message", got["message"])
+	}
+}
+
 func TestNotFound(t *testing.T) {
 	handler := NewServer(directory.NewMemoryStore(directory.DirectoryData{}))
 	rec := httptest.NewRecorder()
@@ -138,7 +213,7 @@ func TestNotFound(t *testing.T) {
 func TestMethodNotAllowed(t *testing.T) {
 	handler := NewServer(directory.NewMemoryStore(directory.DirectoryData{}))
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/healthz", nil)
+	req := httptest.NewRequest(http.MethodPost, "/api/chapters", nil)
 
 	handler.ServeHTTP(rec, req)
 

@@ -2,8 +2,42 @@ package directory
 
 import "context"
 
+type RaceFilter struct {
+	ElectionID   string
+	Jurisdiction string
+	Level        string
+}
+
+type VoterGuideFilter struct {
+	ChapterID  string
+	ElectionID string
+}
+
+type EndorsementFilter struct {
+	ChapterID  string
+	ElectionID string
+	RaceID     string
+}
+
+type BallotMeasureFilter struct {
+	ElectionID string
+}
+
+type MeasurePositionFilter struct {
+	ChapterID string
+	MeasureID string
+}
+
 type Store interface {
 	Directory(ctx context.Context) (DirectoryData, error)
+	Chapters(ctx context.Context) ([]Chapter, error)
+	Elections(ctx context.Context) ([]Election, error)
+	Races(ctx context.Context, filter RaceFilter) ([]Race, error)
+	Candidates(ctx context.Context) ([]Candidate, error)
+	VoterGuides(ctx context.Context, filter VoterGuideFilter) ([]VoterGuide, error)
+	Endorsements(ctx context.Context, filter EndorsementFilter) ([]Endorsement, error)
+	BallotMeasures(ctx context.Context, filter BallotMeasureFilter) ([]BallotMeasure, error)
+	MeasurePositions(ctx context.Context, filter MeasurePositionFilter) ([]MeasurePosition, error)
 }
 
 type Chapter struct {

@@ -53,6 +53,12 @@ make logs           # follow compose logs
 
 For the API-backed frontend flow, run `make seed` or `make dev-full` first so the database has directory data, then start the API with `make dev-api` and run `make dev-web` in another terminal. The Vite dev server proxies `/api` to `http://localhost:8080`, so the frontend can read live directory data while keeping the checked-in California seed as fallback.
 
+## Development / API
+
+Read API contract: `docs/reference/api.md`.
+
+Recommended feature order: stabilize the read API and seed data first, then build frontend screens against that contract. Avoid frontend-only data shapes that diverge from the Go API DTOs.
+
 ## Open Pilot
 
 This repository keeps the base Open Pilot issue template and PR template.

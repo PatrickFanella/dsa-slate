@@ -32,7 +32,7 @@ func (s *PostgresStore) Directory(ctx context.Context) (DirectoryData, error) {
 	}
 
 	races := make([]Race, 0)
-	races, err = s.races(ctx)
+	races, err = s.races(ctx, RaceFilter{})
 	if err != nil {
 		return DirectoryData{}, err
 	}
@@ -44,25 +44,25 @@ func (s *PostgresStore) Directory(ctx context.Context) (DirectoryData, error) {
 	}
 
 	voterGuides := make([]VoterGuide, 0)
-	voterGuides, err = s.voterGuides(ctx)
+	voterGuides, err = s.voterGuides(ctx, VoterGuideFilter{})
 	if err != nil {
 		return DirectoryData{}, err
 	}
 
 	endorsements := make([]Endorsement, 0)
-	endorsements, err = s.endorsements(ctx)
+	endorsements, err = s.endorsements(ctx, EndorsementFilter{})
 	if err != nil {
 		return DirectoryData{}, err
 	}
 
 	ballotMeasures := make([]BallotMeasure, 0)
-	ballotMeasures, err = s.ballotMeasures(ctx)
+	ballotMeasures, err = s.ballotMeasures(ctx, BallotMeasureFilter{})
 	if err != nil {
 		return DirectoryData{}, err
 	}
 
 	measurePositions := make([]MeasurePosition, 0)
-	measurePositions, err = s.measurePositions(ctx)
+	measurePositions, err = s.measurePositions(ctx, MeasurePositionFilter{})
 	if err != nil {
 		return DirectoryData{}, err
 	}
@@ -77,6 +77,38 @@ func (s *PostgresStore) Directory(ctx context.Context) (DirectoryData, error) {
 		BallotMeasures:   ballotMeasures,
 		MeasurePositions: measurePositions,
 	}, nil
+}
+
+func (s *PostgresStore) Chapters(ctx context.Context) ([]Chapter, error) {
+	return s.chapters(ctx)
+}
+
+func (s *PostgresStore) Elections(ctx context.Context) ([]Election, error) {
+	return s.elections(ctx)
+}
+
+func (s *PostgresStore) Races(ctx context.Context, filter RaceFilter) ([]Race, error) {
+	return s.races(ctx, filter)
+}
+
+func (s *PostgresStore) Candidates(ctx context.Context) ([]Candidate, error) {
+	return s.candidates(ctx)
+}
+
+func (s *PostgresStore) VoterGuides(ctx context.Context, filter VoterGuideFilter) ([]VoterGuide, error) {
+	return s.voterGuides(ctx, filter)
+}
+
+func (s *PostgresStore) Endorsements(ctx context.Context, filter EndorsementFilter) ([]Endorsement, error) {
+	return s.endorsements(ctx, filter)
+}
+
+func (s *PostgresStore) BallotMeasures(ctx context.Context, filter BallotMeasureFilter) ([]BallotMeasure, error) {
+	return s.ballotMeasures(ctx, filter)
+}
+
+func (s *PostgresStore) MeasurePositions(ctx context.Context, filter MeasurePositionFilter) ([]MeasurePosition, error) {
+	return s.measurePositions(ctx, filter)
 }
 
 func (s *PostgresStore) chapters(ctx context.Context) ([]Chapter, error) {
@@ -183,12 +215,35 @@ func (s *PostgresStore) elections(ctx context.Context) ([]Election, error) {
 	return elections, nil
 }
 
-func (s *PostgresStore) races(ctx context.Context) ([]Race, error) {
-	rows, err := s.pool.Query(ctx, `
+func (s *PostgresStore) races(ctx context.Context, filter RaceFilter) ([]Race, error) {
+	query := strings.Builder{}
+	query.WriteString(`
 		SELECT id, election_id, office, district, level, jurisdiction
 		FROM races
-		ORDER BY id
 	`)
+
+	clauses := make([]string, 0, 3)
+	args := make([]any, 0, 3)
+	if filter.ElectionID != "" {
+		args = append(args, filter.ElectionID)
+		clauses = append(clauses, fmt.Sprintf("election_id = $%d", len(args)))
+	}
+	if filter.Jurisdiction != "" {
+		args = append(args, filter.Jurisdiction)
+		clauses = append(clauses, fmt.Sprintf("jurisdiction = $%d", len(args)))
+	}
+	if filter.Level != "" {
+		args = append(args, filter.Level)
+		clauses = append(clauses, fmt.Sprintf("level = $%d", len(args)))
+	}
+	if len(clauses) > 0 {
+		query.WriteString("\tWHERE ")
+		query.WriteString(strings.Join(clauses, " AND "))
+		query.WriteString("\n")
+	}
+	query.WriteString("\tORDER BY id\n")
+
+	rows, err := s.pool.Query(ctx, query.String(), args...)
 	if err != nil {
 		return nil, fmt.Errorf("query races: %w", err)
 	}
@@ -297,12 +352,31 @@ func (s *PostgresStore) candidates(ctx context.Context) ([]Candidate, error) {
 	return candidates, nil
 }
 
-func (s *PostgresStore) voterGuides(ctx context.Context) ([]VoterGuide, error) {
-	rows, err := s.pool.Query(ctx, `
+func (s *PostgresStore) voterGuides(ctx context.Context, filter VoterGuideFilter) ([]VoterGuide, error) {
+	query := strings.Builder{}
+	query.WriteString(`
 		SELECT id, title, chapter_id, election_id, source_url, confidence, published_at, summary
 		FROM voter_guides
-		ORDER BY id
 	`)
+
+	clauses := make([]string, 0, 2)
+	args := make([]any, 0, 2)
+	if filter.ChapterID != "" {
+		args = append(args, filter.ChapterID)
+		clauses = append(clauses, fmt.Sprintf("chapter_id = $%d", len(args)))
+	}
+	if filter.ElectionID != "" {
+		args = append(args, filter.ElectionID)
+		clauses = append(clauses, fmt.Sprintf("election_id = $%d", len(args)))
+	}
+	if len(clauses) > 0 {
+		query.WriteString("\tWHERE ")
+		query.WriteString(strings.Join(clauses, " AND "))
+		query.WriteString("\n")
+	}
+	query.WriteString("\tORDER BY id\n")
+
+	rows, err := s.pool.Query(ctx, query.String(), args...)
 	if err != nil {
 		return nil, fmt.Errorf("query voter_guides: %w", err)
 	}
@@ -364,12 +438,36 @@ func (s *PostgresStore) voterGuides(ctx context.Context) ([]VoterGuide, error) {
 	return voterGuides, nil
 }
 
-func (s *PostgresStore) endorsements(ctx context.Context) ([]Endorsement, error) {
-	rows, err := s.pool.Query(ctx, `
-		SELECT id, candidate_id, race_id, chapter_id, voter_guide_id, endorsement_type, source_url, source_date, confidence, notes
-		FROM endorsements
-		ORDER BY id
+func (s *PostgresStore) endorsements(ctx context.Context, filter EndorsementFilter) ([]Endorsement, error) {
+	query := strings.Builder{}
+	query.WriteString(`
+		SELECT e.id, e.candidate_id, e.race_id, e.chapter_id, e.voter_guide_id, e.endorsement_type, e.source_url, e.source_date, e.confidence, e.notes
+		FROM endorsements e
 	`)
+
+	clauses := make([]string, 0, 3)
+	args := make([]any, 0, 3)
+	if filter.ElectionID != "" {
+		query.WriteString("\tJOIN races r ON r.id = e.race_id\n")
+		args = append(args, filter.ElectionID)
+		clauses = append(clauses, fmt.Sprintf("r.election_id = $%d", len(args)))
+	}
+	if filter.ChapterID != "" {
+		args = append(args, filter.ChapterID)
+		clauses = append(clauses, fmt.Sprintf("e.chapter_id = $%d", len(args)))
+	}
+	if filter.RaceID != "" {
+		args = append(args, filter.RaceID)
+		clauses = append(clauses, fmt.Sprintf("e.race_id = $%d", len(args)))
+	}
+	if len(clauses) > 0 {
+		query.WriteString("\tWHERE ")
+		query.WriteString(strings.Join(clauses, " AND "))
+		query.WriteString("\n")
+	}
+	query.WriteString("\tORDER BY e.id\n")
+
+	rows, err := s.pool.Query(ctx, query.String(), args...)
 	if err != nil {
 		return nil, fmt.Errorf("query endorsements: %w", err)
 	}
@@ -443,12 +541,27 @@ func (s *PostgresStore) endorsements(ctx context.Context) ([]Endorsement, error)
 	return endorsements, nil
 }
 
-func (s *PostgresStore) ballotMeasures(ctx context.Context) ([]BallotMeasure, error) {
-	rows, err := s.pool.Query(ctx, `
+func (s *PostgresStore) ballotMeasures(ctx context.Context, filter BallotMeasureFilter) ([]BallotMeasure, error) {
+	query := strings.Builder{}
+	query.WriteString(`
 		SELECT id, election_id, title, jurisdiction, measure_number, summary
 		FROM ballot_measures
-		ORDER BY id
 	`)
+
+	clauses := make([]string, 0, 1)
+	args := make([]any, 0, 1)
+	if filter.ElectionID != "" {
+		args = append(args, filter.ElectionID)
+		clauses = append(clauses, fmt.Sprintf("election_id = $%d", len(args)))
+	}
+	if len(clauses) > 0 {
+		query.WriteString("\tWHERE ")
+		query.WriteString(strings.Join(clauses, " AND "))
+		query.WriteString("\n")
+	}
+	query.WriteString("\tORDER BY id\n")
+
+	rows, err := s.pool.Query(ctx, query.String(), args...)
 	if err != nil {
 		return nil, fmt.Errorf("query ballot_measures: %w", err)
 	}
@@ -502,12 +615,31 @@ func (s *PostgresStore) ballotMeasures(ctx context.Context) ([]BallotMeasure, er
 	return ballotMeasures, nil
 }
 
-func (s *PostgresStore) measurePositions(ctx context.Context) ([]MeasurePosition, error) {
-	rows, err := s.pool.Query(ctx, `
+func (s *PostgresStore) measurePositions(ctx context.Context, filter MeasurePositionFilter) ([]MeasurePosition, error) {
+	query := strings.Builder{}
+	query.WriteString(`
 		SELECT id, measure_id, chapter_id, position, source_url, confidence
 		FROM measure_positions
-		ORDER BY id
 	`)
+
+	clauses := make([]string, 0, 2)
+	args := make([]any, 0, 2)
+	if filter.ChapterID != "" {
+		args = append(args, filter.ChapterID)
+		clauses = append(clauses, fmt.Sprintf("chapter_id = $%d", len(args)))
+	}
+	if filter.MeasureID != "" {
+		args = append(args, filter.MeasureID)
+		clauses = append(clauses, fmt.Sprintf("measure_id = $%d", len(args)))
+	}
+	if len(clauses) > 0 {
+		query.WriteString("\tWHERE ")
+		query.WriteString(strings.Join(clauses, " AND "))
+		query.WriteString("\n")
+	}
+	query.WriteString("\tORDER BY id\n")
+
+	rows, err := s.pool.Query(ctx, query.String(), args...)
 	if err != nil {
 		return nil, fmt.Errorf("query measure_positions: %w", err)
 	}
