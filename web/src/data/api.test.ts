@@ -5,6 +5,7 @@ import {
   fetchCandidates,
   fetchChapters,
   fetchDirectoryData,
+  fetchDirectoryCollections,
   fetchElections,
   fetchEndorsements,
   fetchMeasurePositions,
@@ -65,6 +66,111 @@ describe('fetchDirectoryData', () => {
     await expect(fetchDirectoryData(fetcher, '/api/directory')).rejects.toThrow(
       'Directory API returned no public records',
     );
+  });
+});
+
+describe('fetchDirectoryCollections', () => {
+  it('assembles and returns validated directory data from collection endpoints', async () => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      switch (String(input)) {
+        case '/api/chapters':
+          return jsonResponse(californiaDirectoryData.chapters);
+        case '/api/elections':
+          return jsonResponse(californiaDirectoryData.elections);
+        case '/api/races':
+          return jsonResponse(californiaDirectoryData.races);
+        case '/api/candidates':
+          return jsonResponse(californiaDirectoryData.candidates);
+        case '/api/voter-guides':
+          return jsonResponse(californiaDirectoryData.voterGuides);
+        case '/api/endorsements':
+          return jsonResponse(californiaDirectoryData.endorsements);
+        case '/api/ballot-measures':
+          return jsonResponse(californiaDirectoryData.ballotMeasures);
+        case '/api/measure-positions':
+          return jsonResponse(californiaDirectoryData.measurePositions);
+        default:
+          return jsonResponse({ error: 'unexpected endpoint' }, 404);
+      }
+    });
+
+    const data = await fetchDirectoryCollections(fetcher);
+
+    expect(data).toEqual(californiaDirectoryData);
+  });
+
+  it('calls every collection endpoint with JSON headers', async () => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      switch (String(input)) {
+        case '/api/chapters':
+          return jsonResponse(californiaDirectoryData.chapters);
+        case '/api/elections':
+          return jsonResponse(californiaDirectoryData.elections);
+        case '/api/races':
+          return jsonResponse(californiaDirectoryData.races);
+        case '/api/candidates':
+          return jsonResponse(californiaDirectoryData.candidates);
+        case '/api/voter-guides':
+          return jsonResponse(californiaDirectoryData.voterGuides);
+        case '/api/endorsements':
+          return jsonResponse(californiaDirectoryData.endorsements);
+        case '/api/ballot-measures':
+          return jsonResponse(californiaDirectoryData.ballotMeasures);
+        case '/api/measure-positions':
+          return jsonResponse(californiaDirectoryData.measurePositions);
+        default:
+          return jsonResponse({ error: 'unexpected endpoint' }, 404);
+      }
+    });
+
+    await fetchDirectoryCollections(fetcher);
+
+    expect(fetcher).toHaveBeenNthCalledWith(1, '/api/chapters', { headers: { Accept: 'application/json' } });
+    expect(fetcher).toHaveBeenNthCalledWith(2, '/api/elections', { headers: { Accept: 'application/json' } });
+    expect(fetcher).toHaveBeenNthCalledWith(3, '/api/races', { headers: { Accept: 'application/json' } });
+    expect(fetcher).toHaveBeenNthCalledWith(4, '/api/candidates', { headers: { Accept: 'application/json' } });
+    expect(fetcher).toHaveBeenNthCalledWith(5, '/api/voter-guides', { headers: { Accept: 'application/json' } });
+    expect(fetcher).toHaveBeenNthCalledWith(6, '/api/endorsements', { headers: { Accept: 'application/json' } });
+    expect(fetcher).toHaveBeenNthCalledWith(7, '/api/ballot-measures', { headers: { Accept: 'application/json' } });
+    expect(fetcher).toHaveBeenNthCalledWith(8, '/api/measure-positions', { headers: { Accept: 'application/json' } });
+  });
+
+  it('throws validation errors for invalid assembled collection data', async () => {
+    const invalidData = {
+      ...californiaDirectoryData,
+      endorsements: [{ ...californiaDirectoryData.endorsements[0], sourceUrl: '' }],
+    };
+
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      switch (String(input)) {
+        case '/api/chapters':
+          return jsonResponse(invalidData.chapters);
+        case '/api/elections':
+          return jsonResponse(invalidData.elections);
+        case '/api/races':
+          return jsonResponse(invalidData.races);
+        case '/api/candidates':
+          return jsonResponse(invalidData.candidates);
+        case '/api/voter-guides':
+          return jsonResponse(invalidData.voterGuides);
+        case '/api/endorsements':
+          return jsonResponse(invalidData.endorsements);
+        case '/api/ballot-measures':
+          return jsonResponse(invalidData.ballotMeasures);
+        case '/api/measure-positions':
+          return jsonResponse(invalidData.measurePositions);
+        default:
+          return jsonResponse({ error: 'unexpected endpoint' }, 404);
+      }
+    });
+
+    await expect(fetchDirectoryCollections(fetcher)).rejects.toThrow('Directory API data validation failed:\n');
+  });
+
+  it('throws a clear error when every collection is empty', async () => {
+    const fetcher = vi.fn(async () => jsonResponse([]));
+
+    await expect(fetchDirectoryCollections(fetcher)).rejects.toThrow('Directory API returned no public records');
   });
 });
 

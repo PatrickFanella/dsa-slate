@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { directoryData as staticDirectoryData } from './index';
-import { fetchDirectoryData, type DirectoryFetch } from './api';
+import { fetchDirectoryCollections, type DirectoryFetch } from './api';
 import type { DirectoryData } from './schema';
 
 export type DirectoryLoadStatus = 'loading' | 'api' | 'fallback';
@@ -37,7 +37,7 @@ export function useDirectoryData(fetcher: DirectoryFetch = fetch): DirectoryLoad
 
     setState((current) => directoryLoadStarted(current));
 
-    fetchDirectoryData(fetcher)
+    fetchDirectoryCollections(fetcher)
       .then((data) => {
         if (active) {
           setState((current) => directoryLoadSucceeded(current, data));
