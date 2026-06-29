@@ -53,6 +53,14 @@ export const californiaDirectoryData: DirectoryData = {
       level: 'federal',
       jurisdiction: 'CA-50',
     },
+    {
+      id: 'la-city-council-13-2026-primary',
+      electionId: '2026-ca-primary',
+      office: 'Los Angeles City Council',
+      district: 'District 13',
+      level: 'local',
+      jurisdiction: 'Los Angeles, CA',
+    },
   ],
   candidates: [
     {
@@ -64,6 +72,12 @@ export const californiaDirectoryData: DirectoryData = {
       id: 'aishwarya-sparky-mitra',
       name: 'Aishwarya “Sparky” Mitra',
       party: 'Democrat',
+    },
+    {
+      id: 'hugo-soto-martinez',
+      name: 'Hugo Soto-Martinez',
+      campaignUrl: 'https://www.hugoforcd13.com/',
+      incumbent: true,
     },
   ],
   voterGuides: [
@@ -89,6 +103,18 @@ export const californiaDirectoryData: DirectoryData = {
       summary: 'Local voter guide with federal, statewide, local, and ballot measure recommendations.',
       reviewedAt: '2026-06-28',
       reviewNotes: 'Manual review confirmed visible guide date and public source URL.',
+    },
+    {
+      id: 'dsa-la-2026-primary-guide',
+      title: 'DSA-LA 2026 Primary Voter Guide',
+      chapterId: 'dsa-los-angeles',
+      electionId: '2026-ca-primary',
+      sourceUrl: 'https://dsa-la.org/wp-content/uploads/2026/05/2026_primary_voter_guide-1.pdf',
+      confidence: 'official_source',
+      summary: 'Los Angeles guide with DSA-LA endorsements and recommendations for the 2026 primary.',
+      reviewedAt: '2026-06-28',
+      reviewNotes:
+        'Manual review found the public DSA-LA voter guide PDF and no visible publication date; do not invent publishedAt.',
     },
   ],
   endorsements: [
@@ -119,6 +145,20 @@ export const californiaDirectoryData: DirectoryData = {
       notes: 'Seeded from DSA San Diego voter guide wording; preserve recommendation language.',
       reviewedAt: '2026-06-28',
       reviewNotes: 'Manual review confirmed source URL, source date, chapter, candidate, race, and recommendation wording.',
+    },
+    {
+      id: 'hugo-soto-martinez-dsa-la-2026-primary',
+      candidateId: 'hugo-soto-martinez',
+      raceId: 'la-city-council-13-2026-primary',
+      chapterId: 'dsa-los-angeles',
+      voterGuideId: 'dsa-la-2026-primary-guide',
+      endorsementType: 'endorsed',
+      sourceUrl: 'https://dsa-la.org/wp-content/uploads/2026/05/2026_primary_voter_guide-1.pdf',
+      confidence: 'official_source',
+      notes: 'Seeded from DSA-LA voter guide wording; preserve explicit endorsement language.',
+      reviewedAt: '2026-06-28',
+      reviewNotes:
+        'Manual review confirmed DSA-LA voter guide lists Hugo Soto-Martinez as endorsed for Los Angeles City Council District 13; no visible source date was found.',
     },
   ],
   ballotMeasures: [

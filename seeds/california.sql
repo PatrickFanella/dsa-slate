@@ -60,7 +60,8 @@ SET
 INSERT INTO races (id, election_id, office, district, level, jurisdiction)
 VALUES
   ('ca-48-us-house-2026-primary', '2026-ca-primary', 'U.S. House', 'CA-48', 'federal', 'CA-48'),
-  ('ca-50-us-house-2026-primary', '2026-ca-primary', 'U.S. House', 'CA-50', 'federal', 'CA-50')
+  ('ca-50-us-house-2026-primary', '2026-ca-primary', 'U.S. House', 'CA-50', 'federal', 'CA-50'),
+  ('la-city-council-13-2026-primary', '2026-ca-primary', 'Los Angeles City Council', 'District 13', 'local', 'Los Angeles, CA')
 ON CONFLICT (id) DO UPDATE
 SET
   election_id = EXCLUDED.election_id,
@@ -72,7 +73,8 @@ SET
 INSERT INTO candidates (id, name, campaign_url, party, incumbent, photo_url)
 VALUES
   ('corinna-contreras', 'Corinna Contreras', NULL, 'Democrat', NULL, NULL),
-  ('aishwarya-sparky-mitra', 'Aishwarya “Sparky” Mitra', NULL, 'Democrat', NULL, NULL)
+  ('aishwarya-sparky-mitra', 'Aishwarya “Sparky” Mitra', NULL, 'Democrat', NULL, NULL),
+  ('hugo-soto-martinez', 'Hugo Soto-Martinez', 'https://www.hugoforcd13.com/', NULL, TRUE, NULL)
 ON CONFLICT (id) DO UPDATE
 SET
   name = EXCLUDED.name,
@@ -106,6 +108,18 @@ VALUES
     'Local voter guide with federal, statewide, local, and ballot measure recommendations.',
     DATE '2026-06-28',
     'Manual review confirmed visible guide date and public source URL.'
+  ),
+  (
+    'dsa-la-2026-primary-guide',
+    'DSA-LA 2026 Primary Voter Guide',
+    'dsa-los-angeles',
+    '2026-ca-primary',
+    'https://dsa-la.org/wp-content/uploads/2026/05/2026_primary_voter_guide-1.pdf',
+    'official_source',
+    NULL,
+    'Los Angeles guide with DSA-LA endorsements and recommendations for the 2026 primary.',
+    DATE '2026-06-28',
+    'Manual review found the public DSA-LA voter guide PDF and no visible publication date; do not invent published_at.'
   )
 ON CONFLICT (id) DO UPDATE
 SET
@@ -166,6 +180,20 @@ VALUES
     'Seeded from DSA San Diego voter guide wording; preserve recommendation language.',
     DATE '2026-06-28',
     'Manual review confirmed source URL, source date, chapter, candidate, race, and recommendation wording.'
+  ),
+  (
+    'hugo-soto-martinez-dsa-la-2026-primary',
+    'hugo-soto-martinez',
+    'la-city-council-13-2026-primary',
+    'dsa-los-angeles',
+    'dsa-la-2026-primary-guide',
+    'endorsed',
+    'https://dsa-la.org/wp-content/uploads/2026/05/2026_primary_voter_guide-1.pdf',
+    NULL,
+    'official_source',
+    'Seeded from DSA-LA voter guide wording; preserve explicit endorsement language.',
+    DATE '2026-06-28',
+    'Manual review confirmed DSA-LA voter guide lists Hugo Soto-Martinez as endorsed for Los Angeles City Council District 13; no visible source date was found.'
   )
 ON CONFLICT (id) DO UPDATE
 SET

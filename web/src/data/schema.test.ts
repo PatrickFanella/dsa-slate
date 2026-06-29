@@ -399,7 +399,9 @@ describe('california seed data', () => {
   it('includes California cluster chapter and guide records', () => {
     expect(californiaDirectoryData.chapters.map((chapter) => chapter.id)).toContain('california-dsa');
     expect(californiaDirectoryData.chapters.map((chapter) => chapter.id)).toContain('dsa-san-diego');
+    expect(californiaDirectoryData.chapters.map((chapter) => chapter.id)).toContain('dsa-los-angeles');
     expect(californiaDirectoryData.voterGuides.map((guide) => guide.id)).toContain('california-dsa-2026-primary-guide');
+    expect(californiaDirectoryData.voterGuides.map((guide) => guide.id)).toContain('dsa-la-2026-primary-guide');
   });
 
   it('builds joined endorsement, measure, and guide cards', () => {
@@ -415,6 +417,16 @@ describe('california seed data', () => {
           raceJurisdiction: 'CA-48',
           notes: expect.stringContaining('Seeded from DSA San Diego'),
           endorsementType: 'recommended',
+        }),
+        expect.objectContaining({
+          kind: 'endorsement',
+          key: 'endorsement:hugo-soto-martinez-dsa-la-2026-primary',
+          candidateName: 'Hugo Soto-Martinez',
+          chapterId: 'dsa-los-angeles',
+          raceId: 'la-city-council-13-2026-primary',
+          raceJurisdiction: 'Los Angeles, CA',
+          notes: expect.stringContaining('Seeded from DSA-LA'),
+          endorsementType: 'endorsed',
         }),
       ]),
     );
@@ -440,6 +452,14 @@ describe('california seed data', () => {
           chapterId: 'dsa-san-diego',
           electionId: '2026-ca-primary',
           publishedAt: '2026-05-05',
+          confidence: 'official_source',
+        }),
+        expect.objectContaining({
+          kind: 'voterGuide',
+          key: 'voterGuide:dsa-la-2026-primary-guide',
+          title: 'DSA-LA 2026 Primary Voter Guide',
+          chapterId: 'dsa-los-angeles',
+          electionId: '2026-ca-primary',
           confidence: 'official_source',
         }),
       ]),
