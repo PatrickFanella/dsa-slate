@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { directoryData as staticDirectoryData } from './index';
-import { fetchDirectoryCollections, type DirectoryFetch } from './api';
+import { fetchBrowseDirectoryData, type BrowseFilters, type DirectoryFetch } from './api';
 import type { DirectoryData } from './schema';
 
 export type DirectoryLoadStatus = 'loading' | 'api' | 'fallback';
@@ -10,6 +10,8 @@ export type DirectoryLoadState = {
   status: DirectoryLoadStatus;
   errorMessage?: string;
 };
+
+const defaultBrowseFilters: BrowseFilters = {};
 
 export function initialDirectoryState(data: DirectoryData = staticDirectoryData): DirectoryLoadState {
   return { data, status: 'loading' };
@@ -29,7 +31,11 @@ export function directoryLoadFailed(state: DirectoryLoadState, error: unknown): 
   return { data: state.data, status: 'fallback', errorMessage: message };
 }
 
-export function useDirectoryData(fetcher: DirectoryFetch = fetch): DirectoryLoadState {
+// Callers must pass a memoized filters object; otherwise React will refetch on every render.
+export function useDirectoryData(
+  fetcher: DirectoryFetch = fetch,
+  filters: BrowseFilters = defaultBrowseFilters,
+): DirectoryLoadState {
   const [state, setState] = useState<DirectoryLoadState>(() => initialDirectoryState());
 
   useEffect(() => {
@@ -37,7 +43,7 @@ export function useDirectoryData(fetcher: DirectoryFetch = fetch): DirectoryLoad
 
     setState((current) => directoryLoadStarted(current));
 
-    fetchDirectoryCollections(fetcher)
+    fetchBrowseDirectoryData(filters, fetcher)
       .then((data) => {
         if (active) {
           setState((current) => directoryLoadSucceeded(current, data));
@@ -52,7 +58,7 @@ export function useDirectoryData(fetcher: DirectoryFetch = fetch): DirectoryLoad
     return () => {
       active = false;
     };
-  }, [fetcher]);
+  }, [fetcher, filters]);
 
   return state;
 }

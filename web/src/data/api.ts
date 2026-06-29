@@ -1,6 +1,11 @@
 import { validateDirectoryData, type DirectoryData } from './schema';
 
 export type DirectoryFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+export type BrowseFilters = {
+  chapterId?: string;
+  electionId?: string;
+  raceLevel?: DirectoryData['races'][number]['level'];
+};
 
 type QueryValue = string | undefined;
 
@@ -17,6 +22,14 @@ function buildQueryString(params: Record<string, QueryValue>): string {
 
   const query = searchParams.toString();
   return query ? `?${query}` : '';
+}
+
+function compactFilters<T extends Record<string, QueryValue>>(filters: T): T {
+  return Object.fromEntries(Object.entries(filters).filter(([, value]) => value !== undefined && value !== '')) as T;
+}
+
+function recordIdSet<T extends { id: string }>(records: T[]): Set<string> {
+  return new Set(records.map((record) => record.id));
 }
 
 async function fetchCollectionData<T>(
@@ -96,6 +109,52 @@ export async function fetchDirectoryCollections(fetcher: DirectoryFetch = fetch)
       endorsements,
       ballotMeasures,
       measurePositions,
+    },
+    'Directory API',
+  );
+}
+
+export async function fetchBrowseDirectoryData(
+  filters: BrowseFilters = {},
+  fetcher: DirectoryFetch = fetch,
+): Promise<DirectoryData> {
+  const raceFilters = compactFilters({ electionId: filters.electionId, level: filters.raceLevel });
+  const chapterElectionFilters = compactFilters({ chapterId: filters.chapterId, electionId: filters.electionId });
+  const electionFilters = compactFilters({ electionId: filters.electionId });
+  const chapterFilters = compactFilters({ chapterId: filters.chapterId });
+
+  const [chapters, elections, races, candidates, voterGuides, endorsements, ballotMeasures, measurePositions] =
+    await Promise.all([
+      fetchChapters(fetcher),
+      fetchElections(fetcher),
+      fetchRaces(raceFilters, fetcher),
+      fetchCandidates(fetcher),
+      fetchVoterGuides(chapterElectionFilters, fetcher),
+      fetchEndorsements(chapterElectionFilters, fetcher),
+      fetchBallotMeasures(electionFilters, fetcher),
+      fetchMeasurePositions(chapterFilters, fetcher),
+    ]);
+
+  const raceIds = recordIdSet(races);
+  const ballotMeasureIds = recordIdSet(ballotMeasures);
+
+  const filteredEndorsements = filters.raceLevel
+    ? endorsements.filter((endorsement) => raceIds.has(endorsement.raceId))
+    : endorsements;
+  const filteredMeasurePositions = filters.electionId
+    ? measurePositions.filter((position) => ballotMeasureIds.has(position.measureId))
+    : measurePositions;
+
+  return validateDirectoryApiData(
+    {
+      chapters,
+      elections,
+      races,
+      candidates,
+      voterGuides,
+      endorsements: filteredEndorsements,
+      ballotMeasures,
+      measurePositions: filteredMeasurePositions,
     },
     'Directory API',
   );

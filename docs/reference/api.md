@@ -65,3 +65,14 @@ Confidence values are:
 - `campaign_source`
 - `press_source`
 - `needs_review`
+
+## Frontend browse behavior
+
+The React app uses collection endpoints for structured browse filters:
+
+- chapter filters map to voter guides, endorsements, and measure positions.
+- election filters map to races, voter guides, endorsements, and ballot measures.
+- race-level filters map to races; the frontend prunes endorsements whose races are filtered out because endorsements do not currently expose a direct `level` query parameter.
+- free-text search remains client-side over rendered card fields.
+
+The app never sends or stores raw voter addresses.

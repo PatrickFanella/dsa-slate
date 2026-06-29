@@ -2,6 +2,7 @@ import { EndorsementCard, MeasureCard, VoterGuideCard } from './components/Direc
 import { MethodologyPanel } from './components/MethodologyPanel';
 import { buildDirectoryCards } from './data';
 import { filterDirectoryCards } from './data/filter';
+import type { BrowseFilters } from './data/api';
 import { useDirectoryData, type DirectoryLoadStatus } from './data/useDirectoryData';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
@@ -40,10 +41,36 @@ function getInitialTheme(): ThemeMode {
 
 export default function App() {
   const [query, setQuery] = useState('');
+  const [chapterId, setChapterId] = useState('');
+  const [electionId, setElectionId] = useState('');
+  const [raceLevel, setRaceLevel] = useState('');
   const [theme, setTheme] = useState<ThemeMode>(() => getInitialTheme());
-  const directoryState = useDirectoryData();
+  const browseFilters = useMemo<BrowseFilters>(
+    () => ({
+      chapterId: chapterId || undefined,
+      electionId: electionId || undefined,
+      raceLevel: (raceLevel || undefined) as BrowseFilters['raceLevel'],
+    }),
+    [chapterId, electionId, raceLevel],
+  );
+  const directoryState = useDirectoryData(fetch, browseFilters);
 
   const directoryCards = useMemo(() => buildDirectoryCards(directoryState.data), [directoryState.data]);
+  const chapterOptions = useMemo(
+    () => [...directoryState.data.chapters].sort((left, right) => left.name.localeCompare(right.name)),
+    [directoryState.data.chapters],
+  );
+  const electionOptions = useMemo(
+    () => [...directoryState.data.elections].sort((left, right) => left.name.localeCompare(right.name)),
+    [directoryState.data.elections],
+  );
+  const raceLevelOptions = [
+    { value: 'federal', label: 'Federal' },
+    { value: 'statewide', label: 'Statewide' },
+    { value: 'state_legislature', label: 'State legislature' },
+    { value: 'local', label: 'Local' },
+    { value: 'unknown', label: 'Unknown' },
+  ] as const;
 
   const filteredCards = useMemo(() => filterDirectoryCards(directoryCards, query), [directoryCards, query]);
   const endorsementCards = filteredCards.endorsements;
@@ -108,13 +135,70 @@ export default function App() {
             <button
               className="rounded-none border-2 border-border-strong bg-surface px-6 py-3 font-black text-foreground transition hover:bg-surface-accent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               type="button"
-              onClick={() => setQuery('')}
+              onClick={() => {
+                setQuery('');
+                setChapterId('');
+                setElectionId('');
+                setRaceLevel('');
+              }}
             >
-              Clear
+              Clear all
             </button>
           </div>
+          <div className="mt-4 grid gap-3 rounded-none border-2 border-border bg-surface-muted p-4 md:grid-cols-3">
+            <label className="flex flex-col gap-2 text-sm font-bold text-foreground" htmlFor="chapter-filter">
+              Chapter
+              <select
+                id="chapter-filter"
+                className="rounded-none border-2 border-border-strong bg-surface px-3 py-3 text-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                value={chapterId}
+                onChange={(event) => setChapterId(event.target.value)}
+              >
+                <option value="">All chapters</option>
+                {chapterOptions.map((chapter) => (
+                  <option key={chapter.id} value={chapter.id}>
+                    {chapter.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="flex flex-col gap-2 text-sm font-bold text-foreground" htmlFor="election-filter">
+              Election
+              <select
+                id="election-filter"
+                className="rounded-none border-2 border-border-strong bg-surface px-3 py-3 text-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                value={electionId}
+                onChange={(event) => setElectionId(event.target.value)}
+              >
+                <option value="">All elections</option>
+                {electionOptions.map((election) => (
+                  <option key={election.id} value={election.id}>
+                    {election.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="flex flex-col gap-2 text-sm font-bold text-foreground" htmlFor="race-level-filter">
+              Race level
+              <select
+                id="race-level-filter"
+                className="rounded-none border-2 border-border-strong bg-surface px-3 py-3 text-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                value={raceLevel}
+                onChange={(event) => setRaceLevel(event.target.value)}
+              >
+                <option value="">All levels</option>
+                {raceLevelOptions.map((level) => (
+                  <option key={level.value} value={level.value}>
+                    {level.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
           <div className="mt-3 flex flex-col gap-2 text-sm leading-6 text-muted md:flex-row md:items-center md:justify-between">
-            <p>Text search only — not address lookup. Raw addresses are not stored.</p>
+            <p>Browse filters use public API fields. Text search stays local. Raw addresses are not stored.</p>
             <p aria-live="polite">{visibleResultCount} visible {visibleResultCount === 1 ? 'result' : 'results'}</p>
           </div>
           <DirectoryDataStatus errorMessage={directoryState.errorMessage} status={directoryState.status} />

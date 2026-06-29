@@ -4,6 +4,7 @@ import {
   fetchBallotMeasures,
   fetchCandidates,
   fetchChapters,
+  fetchBrowseDirectoryData,
   fetchDirectoryData,
   fetchDirectoryCollections,
   fetchElections,
@@ -171,6 +172,109 @@ describe('fetchDirectoryCollections', () => {
     const fetcher = vi.fn(async () => jsonResponse([]));
 
     await expect(fetchDirectoryCollections(fetcher)).rejects.toThrow('Directory API returned no public records');
+  });
+});
+
+describe('fetchBrowseDirectoryData', () => {
+  it('routes supported browse filters to collection endpoints', async () => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      switch (String(input)) {
+        case '/api/chapters':
+          return jsonResponse(californiaDirectoryData.chapters);
+        case '/api/elections':
+          return jsonResponse(californiaDirectoryData.elections);
+        case '/api/races?electionId=2026-ca-primary&level=federal':
+          return jsonResponse(
+            californiaDirectoryData.races.filter(
+              (race) => race.electionId === '2026-ca-primary' && race.level === 'federal',
+            ),
+          );
+        case '/api/candidates':
+          return jsonResponse(californiaDirectoryData.candidates);
+        case '/api/voter-guides?chapterId=dsa-san-diego&electionId=2026-ca-primary':
+          return jsonResponse(
+            californiaDirectoryData.voterGuides.filter(
+              (guide) => guide.chapterId === 'dsa-san-diego' && guide.electionId === '2026-ca-primary',
+            ),
+          );
+        case '/api/endorsements?chapterId=dsa-san-diego&electionId=2026-ca-primary':
+          return jsonResponse(californiaDirectoryData.endorsements.filter((endorsement) => endorsement.chapterId === 'dsa-san-diego'));
+        case '/api/ballot-measures?electionId=2026-ca-primary':
+          return jsonResponse(californiaDirectoryData.ballotMeasures.filter((measure) => measure.electionId === '2026-ca-primary'));
+        case '/api/measure-positions?chapterId=dsa-san-diego':
+          return jsonResponse(californiaDirectoryData.measurePositions.filter((position) => position.chapterId === 'dsa-san-diego'));
+        default:
+          return jsonResponse({ error: 'unexpected endpoint' }, 404);
+      }
+    });
+
+    await fetchBrowseDirectoryData(
+      { chapterId: 'dsa-san-diego', electionId: '2026-ca-primary', raceLevel: 'federal' },
+      fetcher,
+    );
+
+    expect(fetcher).toHaveBeenCalledWith('/api/races?electionId=2026-ca-primary&level=federal', {
+      headers: { Accept: 'application/json' },
+    });
+    expect(fetcher).toHaveBeenCalledWith('/api/voter-guides?chapterId=dsa-san-diego&electionId=2026-ca-primary', {
+      headers: { Accept: 'application/json' },
+    });
+    expect(fetcher).toHaveBeenCalledWith('/api/endorsements?chapterId=dsa-san-diego&electionId=2026-ca-primary', {
+      headers: { Accept: 'application/json' },
+    });
+    expect(fetcher).toHaveBeenCalledWith('/api/ballot-measures?electionId=2026-ca-primary', {
+      headers: { Accept: 'application/json' },
+    });
+    expect(fetcher).toHaveBeenCalledWith('/api/measure-positions?chapterId=dsa-san-diego', {
+      headers: { Accept: 'application/json' },
+    });
+  });
+
+  it('prunes endorsements and measure positions that reference filtered-out records', async () => {
+    const includedRace = californiaDirectoryData.races[0];
+    const excludedRace = californiaDirectoryData.races.find((race) => race.id !== includedRace?.id);
+    const includedMeasure = californiaDirectoryData.ballotMeasures[0];
+    const excludedMeasure = { ...includedMeasure, id: 'filtered-out-measure' };
+
+    if (!includedRace || !excludedRace || !includedMeasure) {
+      throw new Error('test fixture must include multiple races and measures');
+    }
+
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      switch (String(input)) {
+        case '/api/chapters':
+          return jsonResponse(californiaDirectoryData.chapters);
+        case '/api/elections':
+          return jsonResponse(californiaDirectoryData.elections);
+        case '/api/races?electionId=2026-ca-primary&level=federal':
+          return jsonResponse([includedRace]);
+        case '/api/candidates':
+          return jsonResponse(californiaDirectoryData.candidates);
+        case '/api/voter-guides?electionId=2026-ca-primary':
+          return jsonResponse(californiaDirectoryData.voterGuides);
+        case '/api/endorsements?electionId=2026-ca-primary':
+          return jsonResponse([
+            { ...californiaDirectoryData.endorsements[0], raceId: includedRace.id },
+            { ...californiaDirectoryData.endorsements[0], id: 'filtered-out-endorsement', raceId: excludedRace.id },
+          ]);
+        case '/api/ballot-measures?electionId=2026-ca-primary':
+          return jsonResponse([includedMeasure]);
+        case '/api/measure-positions':
+          return jsonResponse([
+            { ...californiaDirectoryData.measurePositions[0], measureId: includedMeasure.id },
+            { ...californiaDirectoryData.measurePositions[0], id: 'filtered-out-position', measureId: excludedMeasure.id },
+          ]);
+        default:
+          return jsonResponse({ error: 'unexpected endpoint' }, 404);
+      }
+    });
+
+    const data = await fetchBrowseDirectoryData({ electionId: '2026-ca-primary', raceLevel: 'federal' }, fetcher);
+
+    expect(data.races).toEqual([includedRace]);
+    expect(data.endorsements.map((endorsement) => endorsement.raceId)).toEqual([includedRace.id]);
+    expect(data.ballotMeasures).toEqual([includedMeasure]);
+    expect(data.measurePositions.map((position) => position.measureId)).toEqual([includedMeasure.id]);
   });
 });
 

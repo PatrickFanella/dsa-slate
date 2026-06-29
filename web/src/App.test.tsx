@@ -19,7 +19,11 @@ describe('App', () => {
     expect(html).toContain('How this directory is built');
     expect(html).toContain('Voter guides');
     expect(html).toContain('Search this source-linked directory');
-    expect(html).toContain('Text search only — not address lookup. Raw addresses are not stored.');
+    expect(html).toContain('Browse filters use public API fields. Text search stays local. Raw addresses are not stored.');
+    expect(html).toContain('Chapter');
+    expect(html).toContain('Election');
+    expect(html).toContain('Race level');
+    expect(html).toContain('Clear all');
     expect(html).toContain('Loading live directory data');
     expect(html).toContain('Static fallback is visible while the API loads.');
     expect(html).toContain('Chapters');
