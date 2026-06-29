@@ -5,7 +5,7 @@ COMPOSE := docker compose
 WEB := pnpm --dir web
 
 .PHONY: help verify deps fmt lint test build compose-config open-pilot-check \
-	containers-up containers-down containers-clean logs db-up db-shell migrate db-reset seed dev-web dev-api api-smoke dev dev-full
+	containers-up containers-down containers-clean logs db-up db-shell migrate db-reset seed data-quality dev-web dev-api api-smoke dev dev-full
 
 help:
 	@awk 'BEGIN {FS = ":.*##"; printf "Commands:\n"} /^[a-zA-Z0-9_-]+:.*##/ {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -62,6 +62,14 @@ db-reset: ## Reset local Postgres volume and rerun migrations
 
 seed: migrate ## Apply the California seed fixture
 	$(COMPOSE) exec -T postgres psql -v ON_ERROR_STOP=1 -U "$${POSTGRES_USER:-dsa_slate}" -d "$${POSTGRES_DB:-dsa_slate}" < seeds/california.sql
+
+data-quality: seed ## Run source-linked data quality checks against local seeded Postgres
+	@published_port="$$( $(COMPOSE) port postgres 5432 )"; \
+	postgres_port="$${published_port##*:}"; \
+	DATABASE_URL="$${DATABASE_URL:-postgres://$${POSTGRES_USER:-dsa_slate}:$${POSTGRES_PASSWORD:-change-me}@localhost:$${POSTGRES_PORT:-$${postgres_port:-5432}}/$${POSTGRES_DB:-dsa_slate}?sslmode=disable}"; \
+	QUALITY_REFERENCE_DATE="$${QUALITY_REFERENCE_DATE:-2026-06-28}"; \
+	export DATABASE_URL QUALITY_REFERENCE_DATE; \
+	cd backend && go run ./cmd/dataquality
 
 dev-web: deps ## Start local Vite frontend dev server
 	$(WEB) run dev

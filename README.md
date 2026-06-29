@@ -62,6 +62,8 @@ The public UI includes a light/dark theme toggle driven by `data-theme` on `docu
 
 Recommended feature order: stabilize the read API and seed data first, then build frontend screens against that contract. Avoid frontend-only data shapes that diverge from the Go API DTOs.
 
+- Run `make data-quality` after seed edits to check source-linked records against local Postgres before proposing admin/write API work.
+
 ## Open Pilot
 
 This repository keeps the base Open Pilot issue template and PR template.

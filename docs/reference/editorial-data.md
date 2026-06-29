@@ -39,6 +39,20 @@ The source-linked MVP does not store raw voter addresses. Search is static text 
 - Add notes for ambiguity rather than upgrading confidence.
 - Run `make verify` before merging seed changes.
 
+## Manual add/update workflow
+
+Until a reviewed admin API exists, all public records are added through reviewed seed changes:
+
+1. Capture the public source URL before editing data.
+2. Confirm the endorsing body, chapter, election, race, candidate, or measure context.
+3. Preserve exact wording: `recommended` stays `recommended`; do not upgrade it to `endorsed`.
+4. Use `needs_review` when source authority, date, or wording is unclear.
+5. Update both checked-in seed surfaces when needed: `seeds/california.sql` for Postgres and `web/src/data/california.ts` for static fallback.
+6. Run `make verify`.
+7. Run `make data-quality` when local Docker/Postgres is available.
+
+The data-quality command is a metadata check, not a truth oracle. Human review still decides whether a source is official enough and whether a record should be published.
+
 ## Automated seed validation
 
 `web/src/data/schema.ts` enforces local metadata integrity for checked-in seed data.
@@ -52,4 +66,10 @@ The validator rejects:
 - non-ISO dates; use `YYYY-MM-DD`
 - references to missing chapters, elections, races, candidates, voter guides, or ballot measures
 
-The validator does not prove that an endorsement is true, current, or legally usable. Human review still must confirm that the source page is public, official enough for its confidence label, and quoted without upgrading “recommended” to “endorsed.”
+The validator does not prove that an endorsement is true, current, or legally usable. Human review still must confirm that the source page is public, official enough for its confidence label, and quoted without upgrading “recommended” to “endorsed”.
+
+## Backend data-quality report
+
+`make data-quality` seeds local Postgres and runs `backend/cmd/dataquality` against the read model.
+
+The report fails on missing source URLs for public voter-guide, endorsement, and measure-position records. It warns on stale dates, missing dates, weak confidence labels, and unknown public positions. Warnings are allowed during early seed expansion, but they should be resolved or explained before an admin/write API is introduced.

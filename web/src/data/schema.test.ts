@@ -171,6 +171,46 @@ describe('directory schema helpers', () => {
     );
   });
 
+  it('keeps source-linked public records mandatory before UI card joins', () => {
+    const data: DirectoryData = {
+      chapters: [{ id: 'dsa-san-diego', name: 'DSA San Diego', state: 'CA' }],
+      elections: [{ id: '2026-ca-primary', name: '2026 California Primary' }],
+      races: [],
+      candidates: [],
+      voterGuides: [
+        {
+          id: 'guide-without-source',
+          title: 'Guide without source',
+          chapterId: 'dsa-san-diego',
+          electionId: '2026-ca-primary',
+          sourceUrl: '',
+          confidence: 'needs_review',
+        },
+      ],
+      endorsements: [],
+      ballotMeasures: [
+        { id: 'measure-a', electionId: '2026-ca-primary', title: 'Measure A', jurisdiction: 'San Diego, CA' },
+      ],
+      measurePositions: [
+        {
+          id: 'measure-position-without-source',
+          measureId: 'measure-a',
+          chapterId: 'dsa-san-diego',
+          position: 'unknown',
+          sourceUrl: '',
+          confidence: 'needs_review',
+        },
+      ],
+    };
+
+    expect(validateDirectoryData(data)).toEqual(
+      expect.arrayContaining([
+        'voterGuides[guide-without-source] must include sourceUrl',
+        'measurePositions[measure-position-without-source] must include sourceUrl',
+      ]),
+    );
+  });
+
   it('reports broken record references before cards are built', () => {
     const data: DirectoryData = {
       chapters: [{ id: 'dsa-san-diego', name: 'DSA San Diego', state: 'CA' }],
