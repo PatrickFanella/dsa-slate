@@ -57,6 +57,7 @@ For the API-backed frontend flow, run `make seed` or `make dev-full` first so th
 
 Read API contract: `docs/reference/api.md`.
 Design reference: `docs/reference/design.md`.
+Civic API/privacy reference: `docs/reference/civic-api.md`.
 The frontend uses official DSA palette tokens mapped into Tailwind v4 semantic utilities in `web/src/styles.css`.
 The public UI includes a light/dark theme toggle driven by `data-theme` on `document.documentElement`.
 

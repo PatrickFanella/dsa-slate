@@ -7,6 +7,8 @@
 *.crt
 *.p12
 *.pfx
+client_secret.json
+google-client-secret*.json
 id_rsa
 id_ed25519
 

@@ -45,6 +45,10 @@ All empty collections are JSON arrays, not `null`.
 - `GET /api/ballot-measures?electionId=<id>`
 - `GET /api/measure-positions?chapterId=<id>&measureId=<id>`
 
+## Planned Civic lookup endpoint
+
+`POST /api/civic/lookup` is reserved for a future anonymous Google Civic Information API integration. The first implementation must not store raw addresses. See `docs/reference/civic-api.md`.
+
 ## Error shape
 
 ```json
