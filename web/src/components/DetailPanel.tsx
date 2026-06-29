@@ -36,6 +36,22 @@ function DetailLink({ href, label }: { href?: string; label: string }) {
   );
 }
 
+function ReviewMetadata({ reviewedAt, reviewNotes }: { reviewedAt?: string; reviewNotes?: string }) {
+  if (!reviewedAt && !reviewNotes) {
+    return null;
+  }
+
+  return (
+    <section className="mt-5 border-2 border-border bg-surface-muted p-4">
+      <p className="text-xs font-black uppercase tracking-wide text-primary">Editorial review</p>
+      <dl className="mt-2">
+        <DetailRow label="Reviewed on" value={reviewedAt} />
+        <DetailRow label="Review notes" value={reviewNotes} />
+      </dl>
+    </section>
+  );
+}
+
 export function DetailPanel({ item }: DetailPanelProps) {
   if (!item) {
     return (
@@ -92,6 +108,7 @@ function EndorsementDetail({ item }: { item: EndorsementCardData }) {
         <DetailRow label="Candidate party" value={item.candidateParty} />
         <DetailRow label="Notes" value={item.notes} />
       </dl>
+      <ReviewMetadata reviewedAt={item.reviewedAt} reviewNotes={item.reviewNotes} />
       <div className="mt-4 flex flex-wrap gap-4 text-sm font-bold">
         <DetailLink href={item.candidateCampaignUrl} label="Candidate site" />
         <DetailLink href={item.chapterWebsiteUrl} label="Chapter site" />
@@ -112,6 +129,7 @@ function MeasureDetail({ item }: { item: MeasureCardData }) {
         <DetailRow label="Election" value={[item.electionName, item.electionDate].filter(Boolean).join(' · ')} />
         <DetailRow label="Summary" value={item.summary} />
       </dl>
+      <ReviewMetadata reviewedAt={item.reviewedAt} reviewNotes={item.reviewNotes} />
       <div className="mt-4 text-sm font-bold">
         <DetailLink href={item.chapterWebsiteUrl} label="Chapter site" />
       </div>
@@ -127,8 +145,13 @@ function VoterGuideDetail({ item }: { item: VoterGuideCardData }) {
         <DetailRow label="Chapter" value={item.chapterName} />
         <DetailRow label="Election" value={[item.electionName, item.electionDate].filter(Boolean).join(' · ')} />
         <DetailRow label="Published" value={item.publishedAt} />
+        <DetailRow
+          label="Publication date"
+          value={!item.publishedAt && item.reviewedAt ? 'No visible publication date in reviewed source.' : undefined}
+        />
         <DetailRow label="Summary" value={item.summary} />
       </dl>
+      <ReviewMetadata reviewedAt={item.reviewedAt} reviewNotes={item.reviewNotes} />
       <div className="mt-4 text-sm font-bold">
         <DetailLink href={item.chapterWebsiteUrl} label="Chapter site" />
       </div>

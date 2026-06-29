@@ -30,6 +30,8 @@ export type EndorsementCardData = {
   confidence: ConfidenceLevel;
   sourceUrl: string;
   sourceDate?: string;
+  reviewedAt?: string;
+  reviewNotes?: string;
   notes?: string;
 };
 
@@ -51,6 +53,8 @@ export type MeasureCardData = {
   position: string;
   confidence: ConfidenceLevel;
   sourceUrl: string;
+  reviewedAt?: string;
+  reviewNotes?: string;
 };
 
 export type VoterGuideCardData = {
@@ -67,6 +71,8 @@ export type VoterGuideCardData = {
   confidence: ConfidenceLevel;
   sourceUrl: string;
   publishedAt?: string;
+  reviewedAt?: string;
+  reviewNotes?: string;
   summary?: string;
 };
 
@@ -141,6 +147,8 @@ function buildEndorsementCards(data: DirectoryData): EndorsementCardData[] {
       confidence: endorsement.confidence,
       sourceUrl: endorsement.sourceUrl,
       sourceDate: endorsement.sourceDate,
+      reviewedAt: endorsement.reviewedAt,
+      reviewNotes: endorsement.reviewNotes,
       notes: endorsement.notes,
     };
   });
@@ -180,6 +188,8 @@ function buildMeasureCards(data: DirectoryData): MeasureCardData[] {
       position: position.position,
       confidence: position.confidence,
       sourceUrl: position.sourceUrl,
+      reviewedAt: position.reviewedAt,
+      reviewNotes: position.reviewNotes,
     };
   });
 }
@@ -213,6 +223,8 @@ function buildVoterGuideCards(data: DirectoryData): VoterGuideCardData[] {
       confidence: guide.confidence,
       sourceUrl: guide.sourceUrl,
       publishedAt: guide.publishedAt,
+      reviewedAt: guide.reviewedAt,
+      reviewNotes: guide.reviewNotes,
       summary: guide.summary,
     };
   });

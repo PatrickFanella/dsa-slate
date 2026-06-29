@@ -61,6 +61,10 @@ Use semantic utilities such as `bg-background`, `text-foreground`, `bg-surface`,
 - Avoid red-on-green combinations.
 - Keep essential text at readable sizes.
 
+## Editorial review metadata in details
+
+Review metadata appears only in the selected record detail panel, not on card faces. Use `reviewedAt` and `reviewNotes` to explain manual source review, especially when a valid source has no visible publication or source date. Keep source links, confidence labels, and original endorsement wording more prominent than review notes.
+
 ## Directory detail panel
 
 Directory cards may be selectable, but source links must remain separate clickable elements.

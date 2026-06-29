@@ -427,6 +427,8 @@ describe('california seed data', () => {
           raceJurisdiction: 'Los Angeles, CA',
           notes: expect.stringContaining('Seeded from DSA-LA'),
           endorsementType: 'endorsed',
+          reviewedAt: '2026-06-28',
+          reviewNotes: expect.stringContaining('Manual review confirmed DSA-LA voter guide'),
         }),
       ]),
     );
@@ -440,6 +442,8 @@ describe('california seed data', () => {
           summary: expect.stringContaining('Local ballot measure'),
           title: 'San Diego Measure A',
           position: 'yes',
+          reviewedAt: '2026-06-28',
+          reviewNotes: expect.stringContaining('Manual review confirmed source URL'),
         }),
       ]),
     );
@@ -453,6 +457,8 @@ describe('california seed data', () => {
           electionId: '2026-ca-primary',
           publishedAt: '2026-05-05',
           confidence: 'official_source',
+          reviewedAt: '2026-06-28',
+          reviewNotes: expect.stringContaining('Manual review confirmed visible guide date'),
         }),
         expect.objectContaining({
           kind: 'voterGuide',
@@ -461,6 +467,8 @@ describe('california seed data', () => {
           chapterId: 'dsa-los-angeles',
           electionId: '2026-ca-primary',
           confidence: 'official_source',
+          reviewedAt: '2026-06-28',
+          reviewNotes: expect.stringContaining('no visible publication date'),
         }),
       ]),
     );

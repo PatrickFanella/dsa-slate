@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import App from './App';
 import { DetailPanel } from './components/DetailPanel';
 import { VoterGuideCard } from './components/DirectoryCard';
-import { getEndorsementCards, getVoterGuideCards } from './data';
+import { getEndorsementCards, getMeasureCards, getVoterGuideCards } from './data';
 
 describe('App', () => {
   it('renders the source-linked directory homepage', () => {
@@ -66,5 +66,29 @@ describe('App', () => {
     expect(html).toContain('Notes');
     expect(html).toContain('Seeded from DSA San Diego');
     expect(html).toContain('Original source');
+  });
+
+  it('shows editorial review metadata in selected record details', () => {
+    const dsaLaEndorsement = getEndorsementCards().find(
+      (card) => card.id === 'hugo-soto-martinez-dsa-la-2026-primary',
+    );
+    const caGuide = getVoterGuideCards().find((card) => card.id === 'dsa-la-2026-primary-guide');
+    const measure = getMeasureCards()[0];
+
+    expect(dsaLaEndorsement).toBeDefined();
+    expect(caGuide).toBeDefined();
+
+    const endorsementHtml = renderToString(<DetailPanel item={dsaLaEndorsement!} />);
+    expect(endorsementHtml).toContain('Editorial review');
+    expect(endorsementHtml).toContain('Reviewed on');
+    expect(endorsementHtml).toContain('2026-06-28');
+    expect(endorsementHtml).toContain('Manual review confirmed DSA-LA voter guide');
+
+    const guideHtml = renderToString(<DetailPanel item={caGuide!} />);
+    expect(guideHtml).toContain('No visible publication date in reviewed source.');
+    expect(guideHtml).toContain('do not invent publishedAt');
+
+    const measureHtml = renderToString(<DetailPanel item={measure!} />);
+    expect(measureHtml).toContain('Manual review confirmed source URL');
   });
 });
