@@ -86,3 +86,12 @@ The validator does not prove that an endorsement is true, current, or legally us
 `make data-quality` seeds local Postgres and runs `backend/cmd/dataquality` against the read model.
 
 The report fails on missing source URLs for public voter-guide, endorsement, and measure-position records. It warns on stale dates, missing dates, weak confidence labels, and unknown public positions. A documented editorial review can suppress missing-date warnings for source-bearing records when the visible source date is absent. Warnings are allowed during early seed expansion, but they should be resolved or explained before an admin/write API is introduced.
+
+## Admin draft workflow
+
+The reviewed draft workflow uses token-protected admin endpoints with `ADMIN_API_TOKEN`.
+
+- Drafts live in separate admin tables until published.
+- Publish copies reviewed drafts into the public read tables.
+- Archive marks drafts inactive without deleting history.
+- No public submissions, user accounts, OAuth, or raw voter addresses are part of this slice.

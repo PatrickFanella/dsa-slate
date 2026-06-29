@@ -21,6 +21,8 @@ First trusted-directory slice:
 
 Out of scope for the first launch: address lookup, admin UI, public submissions, live election-night results, campaign coordination, address storage, and automated nationwide scraping.
 
+Editorial/admin writes use a local bearer token from `ADMIN_API_TOKEN` instead of user accounts or OAuth.
+
 ## Stack
 
 - Go backend
@@ -52,6 +54,8 @@ make logs           # follow compose logs
 ```
 
 For the API-backed frontend flow, run `make seed` or `make dev-full` first so the database has directory data, then start the API with `make dev-api` and run `make dev-web` in another terminal. The Vite dev server proxies `/api` to `http://localhost:8080`, so the frontend can read live directory data while keeping the checked-in California seed as fallback.
+
+Admin draft endpoints are token-protected and local-only; they are not public submission forms.
 
 ## Development / API
 

@@ -1,11 +1,10 @@
-# DSA Slate Read API
+# DSA Slate API
 
-The API is a public, read-only JSON API for source-linked electoral guide data.
+The public API is read-only JSON for source-linked electoral guide data. Admin draft endpoints are token-protected and local-only.
 
 ## Non-goals
 
-- No write/admin endpoints yet.
-- No authentication yet.
+- No public write endpoints.
 - No raw voter addresses or address lookup.
 - No personally identifying voter data.
 
@@ -48,6 +47,41 @@ All empty collections are JSON arrays, not `null`.
 ## Planned Civic lookup endpoint
 
 `POST /api/civic/lookup` is reserved for a future anonymous Google Civic Information API integration. The first implementation must not store raw addresses. See `docs/reference/civic-api.md`.
+
+## Admin draft endpoints
+
+All admin endpoints require:
+
+```http
+Authorization: Bearer <ADMIN_API_TOKEN>
+```
+
+They are intended for local/editorial use only and operate on draft records before publishing into the public read tables.
+
+- `GET /api/admin/chapter-drafts`
+- `POST /api/admin/chapter-drafts`
+- `GET /api/admin/chapter-drafts/{id}`
+- `PUT /api/admin/chapter-drafts/{id}`
+- `POST /api/admin/chapter-drafts/{id}/publish`
+- `POST /api/admin/chapter-drafts/{id}/archive`
+- `GET /api/admin/endorsement-drafts`
+- `POST /api/admin/endorsement-drafts`
+- `GET /api/admin/endorsement-drafts/{id}`
+- `PUT /api/admin/endorsement-drafts/{id}`
+- `POST /api/admin/endorsement-drafts/{id}/publish`
+- `POST /api/admin/endorsement-drafts/{id}/archive`
+
+Unauthorized requests return:
+
+```json
+{"error":"unauthorized"}
+```
+
+Validation errors return:
+
+```json
+{"error":"validation_failed","messages":["..."]}
+```
 
 ## Error shape
 

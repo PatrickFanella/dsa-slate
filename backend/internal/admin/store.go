@@ -52,10 +52,12 @@ type EndorsementDraft struct {
 
 type Store interface {
 	ListChapterDrafts(ctx context.Context) ([]ChapterDraft, error)
+	GetChapterDraft(ctx context.Context, id string) (ChapterDraft, error)
 	UpsertChapterDraft(ctx context.Context, draft ChapterDraft, actor string) (ChapterDraft, error)
 	PublishChapterDraft(ctx context.Context, id string, actor string) error
 	ArchiveChapterDraft(ctx context.Context, id string, actor string) error
 	ListEndorsementDrafts(ctx context.Context) ([]EndorsementDraft, error)
+	GetEndorsementDraft(ctx context.Context, id string) (EndorsementDraft, error)
 	UpsertEndorsementDraft(ctx context.Context, draft EndorsementDraft, actor string) (EndorsementDraft, error)
 	PublishEndorsementDraft(ctx context.Context, id string, actor string) error
 	ArchiveEndorsementDraft(ctx context.Context, id string, actor string) error

@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"os"
 
+	"git.subcult.tv/subculture-collective/dsa-slate/internal/admin"
+	appcfg "git.subcult.tv/subculture-collective/dsa-slate/internal/app"
 	"git.subcult.tv/subculture-collective/dsa-slate/internal/directory"
 	"git.subcult.tv/subculture-collective/dsa-slate/internal/httpapi"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -34,6 +36,12 @@ func main() {
 		log.Fatalf("connect to postgres: %v", err)
 	}
 
-	handler := httpapi.NewServer(directory.NewPostgresStore(pool))
+	var handler http.Handler
+	adminToken := appcfg.AdminAPIToken()
+	if adminToken != "" {
+		handler = httpapi.NewServerWithAdmin(directory.NewPostgresStore(pool), admin.NewPostgresStore(pool), adminToken)
+	} else {
+		handler = httpapi.NewServer(directory.NewPostgresStore(pool))
+	}
 	log.Fatal(http.ListenAndServe(":"+port, handler))
 }

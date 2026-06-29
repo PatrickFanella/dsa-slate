@@ -1,11 +1,15 @@
 package httpapi
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
+	"git.subcult.tv/subculture-collective/dsa-slate/internal/admin"
 	"git.subcult.tv/subculture-collective/dsa-slate/internal/directory"
 )
 
@@ -255,4 +259,147 @@ func TestMethodNotAllowed(t *testing.T) {
 	if got := rec.Header().Get("Allow"); got != http.MethodGet {
 		t.Fatalf("Allow = %q, want %q", got, http.MethodGet)
 	}
+}
+
+func TestAdminRoutesRequireToken(t *testing.T) {
+	handler := NewServerWithAdmin(directory.NewMemoryStore(directory.DirectoryData{}), &testAdminStore{}, "secret")
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/chapter-drafts", strings.NewReader(`{"id":"draft-1"}`))
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusUnauthorized)
+	}
+
+	rec = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/api/admin/chapter-drafts", strings.NewReader(`{"id":"draft-1"}`))
+	req.Header.Set("Authorization", "Bearer wrong")
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusUnauthorized)
+	}
+}
+
+func TestAdminCreateChapterDraft(t *testing.T) {
+	store := &testAdminStore{}
+	handler := NewServerWithAdmin(directory.NewMemoryStore(directory.DirectoryData{}), store, "secret")
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/chapter-drafts", strings.NewReader(`{"id":"draft-1","chapterId":"chapter-1","name":"Chapter 1","state":"CA"}`))
+	req.Header.Set("Authorization", "Bearer secret")
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+	if store.lastChapterDraft.ID != "draft-1" || store.lastActor != "admin" {
+		t.Fatalf("unexpected store call: %#v actor=%q", store.lastChapterDraft, store.lastActor)
+	}
+
+	var got admin.ChapterDraft
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if got.ID != "draft-1" || got.ChapterID != "chapter-1" {
+		t.Fatalf("unexpected response: %#v", got)
+	}
+}
+
+func TestAdminCreateChapterDraftValidationFailure(t *testing.T) {
+	handler := NewServerWithAdmin(directory.NewMemoryStore(directory.DirectoryData{}), &testAdminStore{}, "secret")
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/chapter-drafts", strings.NewReader(`{"id":"draft-1","chapterId":"chapter-1","name":"Chapter 1","state":"CA","websiteUrl":"ftp://example.com"}`))
+	req.Header.Set("Authorization", "Bearer secret")
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
+	}
+	var got map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if got["error"] != "validation_failed" {
+		t.Fatalf("error = %#v, want validation_failed", got["error"])
+	}
+}
+
+type testAdminStore struct {
+	chapterDrafts     []admin.ChapterDraft
+	endorsementDrafts []admin.EndorsementDraft
+	chapterDraft      admin.ChapterDraft
+	endorsementDraft  admin.EndorsementDraft
+	lastActor         string
+	lastChapterDraft  admin.ChapterDraft
+	lastEndorsement   admin.EndorsementDraft
+}
+
+func (s *testAdminStore) ListChapterDrafts(ctx context.Context) ([]admin.ChapterDraft, error) {
+	return s.chapterDrafts, nil
+}
+
+func (s *testAdminStore) GetChapterDraft(ctx context.Context, id string) (admin.ChapterDraft, error) {
+	if s.chapterDraft.ID == id {
+		return s.chapterDraft, nil
+	}
+	return admin.ChapterDraft{}, sql.ErrNoRows
+}
+
+func (s *testAdminStore) UpsertChapterDraft(ctx context.Context, draft admin.ChapterDraft, actor string) (admin.ChapterDraft, error) {
+	s.lastActor = actor
+	s.lastChapterDraft = draft
+	if draft.ID == "" {
+		draft.ID = "draft-1"
+	}
+	if draft.Status == "" {
+		draft.Status = admin.StatusDraft
+	}
+	return draft, nil
+}
+
+func (s *testAdminStore) PublishChapterDraft(ctx context.Context, id string, actor string) error {
+	s.lastActor = actor
+	return nil
+}
+
+func (s *testAdminStore) ArchiveChapterDraft(ctx context.Context, id string, actor string) error {
+	s.lastActor = actor
+	return nil
+}
+
+func (s *testAdminStore) ListEndorsementDrafts(ctx context.Context) ([]admin.EndorsementDraft, error) {
+	return s.endorsementDrafts, nil
+}
+
+func (s *testAdminStore) GetEndorsementDraft(ctx context.Context, id string) (admin.EndorsementDraft, error) {
+	if s.endorsementDraft.ID == id {
+		return s.endorsementDraft, nil
+	}
+	return admin.EndorsementDraft{}, sql.ErrNoRows
+}
+
+func (s *testAdminStore) UpsertEndorsementDraft(ctx context.Context, draft admin.EndorsementDraft, actor string) (admin.EndorsementDraft, error) {
+	s.lastActor = actor
+	s.lastEndorsement = draft
+	if draft.ID == "" {
+		draft.ID = "draft-1"
+	}
+	if draft.Status == "" {
+		draft.Status = admin.StatusDraft
+	}
+	return draft, nil
+}
+
+func (s *testAdminStore) PublishEndorsementDraft(ctx context.Context, id string, actor string) error {
+	s.lastActor = actor
+	return nil
+}
+
+func (s *testAdminStore) ArchiveEndorsementDraft(ctx context.Context, id string, actor string) error {
+	s.lastActor = actor
+	return nil
 }
