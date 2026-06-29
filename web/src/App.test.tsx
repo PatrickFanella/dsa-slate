@@ -1,8 +1,9 @@
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import App from './App';
+import { DetailPanel } from './components/DetailPanel';
 import { VoterGuideCard } from './components/DirectoryCard';
-import { getVoterGuideCards } from './data';
+import { getEndorsementCards, getVoterGuideCards } from './data';
 
 describe('App', () => {
   it('renders the source-linked directory homepage', () => {
@@ -24,6 +25,9 @@ describe('App', () => {
     expect(html).toContain('Election');
     expect(html).toContain('Race level');
     expect(html).toContain('Clear all');
+    expect(html).toContain('Record detail');
+    expect(html).toContain('Select a record');
+    expect(html).toContain('Choose a voter guide, endorsement, or ballot measure to inspect source-linked details.');
     expect(html).toContain('Loading live directory data');
     expect(html).toContain('Static fallback is visible while the API loads.');
     expect(html).toContain('Chapters');
@@ -41,12 +45,26 @@ describe('App', () => {
     expect(html).toContain('needs_review');
     expect(html).toContain('San Diego Measure A');
     expect(html).toContain('Original source');
+    expect(html).toContain('aria-pressed="false"');
   });
 
   it('shows confidence on voter guide cards', () => {
     const html = renderToString(<VoterGuideCard item={getVoterGuideCards()[0]} />);
 
     expect(html).toContain('Official source');
+    expect(html).toContain('Original source');
+  });
+
+  it('shows selected record details with source metadata', () => {
+    const html = renderToString(<DetailPanel item={getEndorsementCards()[0]} />);
+
+    expect(html).toContain('Candidate endorsement');
+    expect(html).toContain('Corinna Contreras');
+    expect(html).toContain('Source label');
+    expect(html).toContain('Race jurisdiction');
+    expect(html).toContain('CA-48');
+    expect(html).toContain('Notes');
+    expect(html).toContain('Seeded from DSA San Diego');
     expect(html).toContain('Original source');
   });
 });

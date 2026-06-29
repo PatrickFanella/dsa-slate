@@ -60,3 +60,13 @@ Use semantic utilities such as `bg-background`, `text-foreground`, `bg-surface`,
 - Keep focus rings visible.
 - Avoid red-on-green combinations.
 - Keep essential text at readable sizes.
+
+## Directory detail panel
+
+Directory cards may be selectable, but source links must remain separate clickable elements.
+
+- Use `aria-pressed` on the selection button.
+- Show selected state with a label plus border/shadow changes, not color alone.
+- Keep the detail panel inline; do not use a modal for browsing records.
+- The panel should include the original source link, confidence label, chapter context, election/race context when available, and any notes or summaries in the data.
+- The detail region should be labeled and announce changes with `aria-live="polite"`.

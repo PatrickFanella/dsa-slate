@@ -1,6 +1,7 @@
+import { DetailPanel } from './components/DetailPanel';
 import { EndorsementCard, MeasureCard, VoterGuideCard } from './components/DirectoryCard';
 import { MethodologyPanel } from './components/MethodologyPanel';
-import { buildDirectoryCards } from './data';
+import { allDirectoryCards, buildDirectoryCards, type DirectoryCardKey } from './data';
 import { filterDirectoryCards } from './data/filter';
 import type { BrowseFilters } from './data/api';
 import { useDirectoryData, type DirectoryLoadStatus } from './data/useDirectoryData';
@@ -44,6 +45,7 @@ export default function App() {
   const [chapterId, setChapterId] = useState('');
   const [electionId, setElectionId] = useState('');
   const [raceLevel, setRaceLevel] = useState('');
+  const [selectedCardKey, setSelectedCardKey] = useState<DirectoryCardKey | undefined>(undefined);
   const [theme, setTheme] = useState<ThemeMode>(() => getInitialTheme());
   const browseFilters = useMemo<BrowseFilters>(
     () => ({
@@ -73,12 +75,23 @@ export default function App() {
   ] as const;
 
   const filteredCards = useMemo(() => filterDirectoryCards(directoryCards, query), [directoryCards, query]);
+  const filteredCardList = useMemo(() => allDirectoryCards(filteredCards), [filteredCards]);
+  const selectedCard = useMemo(
+    () => filteredCardList.find((card) => card.key === selectedCardKey),
+    [filteredCardList, selectedCardKey],
+  );
   const endorsementCards = filteredCards.endorsements;
   const measureCards = filteredCards.measures;
   const voterGuideCards = filteredCards.voterGuides;
   const visibleResultCount = endorsementCards.length + measureCards.length + voterGuideCards.length;
   const hasResults = visibleResultCount > 0;
   const noVisibleResults = !hasResults;
+
+  useEffect(() => {
+    if (selectedCardKey && !selectedCard) {
+      setSelectedCardKey(undefined);
+    }
+  }, [selectedCard, selectedCardKey]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -140,6 +153,7 @@ export default function App() {
                 setChapterId('');
                 setElectionId('');
                 setRaceLevel('');
+                setSelectedCardKey(undefined);
               }}
             >
               Clear all
@@ -210,57 +224,79 @@ export default function App() {
           <StatCard label="Voter guides" value={voterGuideCards.length.toString()} />
         </section>
 
-        {noVisibleResults ? (
-          <EmptyStateCard message="No records match this text search. Try a different name, chapter, office, or election." />
-        ) : null}
+        <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start">
+          <div className="lg:order-2 lg:sticky lg:top-6">
+            <DetailPanel item={selectedCard} />
+          </div>
+          <div className="flex flex-col gap-10 lg:order-1">
+            {noVisibleResults ? (
+              <EmptyStateCard message="No records match this text search. Try a different name, chapter, office, or election." />
+            ) : null}
 
-        <DirectorySection
-          count={voterGuideCards.length}
-          title="Voter guides"
-          description="Initial source-linked seed set for the directory MVP."
-        >
-          {voterGuideCards.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2">
-              {voterGuideCards.map((item) => (
-                <VoterGuideCard item={item} key={item.id} />
-              ))}
-            </div>
-          ) : hasResults ? (
-            <EmptyStateCard message="No voter guides match this search." />
-          ) : null}
-        </DirectorySection>
+            <DirectorySection
+              count={voterGuideCards.length}
+              title="Voter guides"
+              description="Initial source-linked seed set for the directory MVP."
+            >
+              {voterGuideCards.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {voterGuideCards.map((item) => (
+                    <VoterGuideCard
+                      item={item}
+                      key={item.id}
+                      selected={selectedCardKey === item.key}
+                      onSelect={() => setSelectedCardKey(item.key)}
+                    />
+                  ))}
+                </div>
+              ) : hasResults ? (
+                <EmptyStateCard message="No voter guides match this search." />
+              ) : null}
+            </DirectorySection>
 
-        <DirectorySection
-          count={endorsementCards.length}
-          title="Candidate endorsements & recommendations"
-          description="Recommendation and endorsement wording is preserved exactly as recorded from the source."
-        >
-          {endorsementCards.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2">
-              {endorsementCards.map((item) => (
-                <EndorsementCard item={item} key={item.id} />
-              ))}
-            </div>
-          ) : hasResults ? (
-            <EmptyStateCard message="No candidate endorsements or recommendations match this search." />
-          ) : null}
-        </DirectorySection>
+            <DirectorySection
+              count={endorsementCards.length}
+              title="Candidate endorsements & recommendations"
+              description="Recommendation and endorsement wording is preserved exactly as recorded from the source."
+            >
+              {endorsementCards.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {endorsementCards.map((item) => (
+                    <EndorsementCard
+                      item={item}
+                      key={item.id}
+                      selected={selectedCardKey === item.key}
+                      onSelect={() => setSelectedCardKey(item.key)}
+                    />
+                  ))}
+                </div>
+              ) : hasResults ? (
+                <EmptyStateCard message="No candidate endorsements or recommendations match this search." />
+              ) : null}
+            </DirectorySection>
 
-        <DirectorySection
-          count={measureCards.length}
-          title="Ballot measures"
-          description="Measure positions stay linked to the original chapter source."
-        >
-          {measureCards.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2">
-              {measureCards.map((item) => (
-                <MeasureCard item={item} key={item.id} />
-              ))}
-            </div>
-          ) : hasResults ? (
-            <EmptyStateCard message="No ballot measures match this search." />
-          ) : null}
-        </DirectorySection>
+            <DirectorySection
+              count={measureCards.length}
+              title="Ballot measures"
+              description="Measure positions stay linked to the original chapter source."
+            >
+              {measureCards.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {measureCards.map((item) => (
+                    <MeasureCard
+                      item={item}
+                      key={item.id}
+                      selected={selectedCardKey === item.key}
+                      onSelect={() => setSelectedCardKey(item.key)}
+                    />
+                  ))}
+                </div>
+              ) : hasResults ? (
+                <EmptyStateCard message="No ballot measures match this search." />
+              ) : null}
+            </DirectorySection>
+          </div>
+        </section>
 
         <MethodologyPanel />
       </section>

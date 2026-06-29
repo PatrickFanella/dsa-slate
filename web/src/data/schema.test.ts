@@ -306,16 +306,41 @@ describe('california seed data', () => {
   it('builds joined endorsement, measure, and guide cards', () => {
     expect(getEndorsementCards()).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ candidateName: 'Corinna Contreras', endorsementType: 'recommended' }),
+        expect.objectContaining({
+          kind: 'endorsement',
+          key: 'endorsement:contreras-dsa-sd-2026-primary',
+          candidateName: 'Corinna Contreras',
+          candidateParty: 'Democrat',
+          chapterId: 'dsa-san-diego',
+          raceId: 'ca-48-us-house-2026-primary',
+          raceJurisdiction: 'CA-48',
+          notes: expect.stringContaining('Seeded from DSA San Diego'),
+          endorsementType: 'recommended',
+        }),
       ]),
     );
     expect(getMeasureCards()).toEqual(
-      expect.arrayContaining([expect.objectContaining({ title: 'San Diego Measure A', position: 'yes' })]),
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'measure',
+          key: 'measure:san-diego-measure-a-dsa-sd-yes-2026-primary',
+          measureId: 'san-diego-measure-a-2026-primary',
+          measureNumber: 'A',
+          summary: expect.stringContaining('Local ballot measure'),
+          title: 'San Diego Measure A',
+          position: 'yes',
+        }),
+      ]),
     );
     expect(getVoterGuideCards()).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
+          kind: 'voterGuide',
+          key: 'voterGuide:dsa-san-diego-2026-primary-guide',
           title: "DSA San Diego's June 2026 Primary Voter Guide",
+          chapterId: 'dsa-san-diego',
+          electionId: '2026-ca-primary',
+          publishedAt: '2026-05-05',
           confidence: 'official_source',
         }),
       ]),
