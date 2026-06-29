@@ -81,7 +81,7 @@ SET
   incumbent = EXCLUDED.incumbent,
   photo_url = EXCLUDED.photo_url;
 
-INSERT INTO voter_guides (id, title, chapter_id, election_id, source_url, confidence, published_at, summary)
+INSERT INTO voter_guides (id, title, chapter_id, election_id, source_url, confidence, published_at, summary, reviewed_at, review_notes)
 VALUES
   (
     'california-dsa-2026-primary-guide',
@@ -91,7 +91,9 @@ VALUES
     'https://www.californiadsa.org/voterguide',
     'official_source',
     NULL,
-    'Statewide guide and local chapter guide hub for California DSA electoral recommendations.'
+    'Statewide guide and local chapter guide hub for California DSA electoral recommendations.',
+    DATE '2026-06-28',
+    'Manual review found no visible publication date on the public source page; do not invent published_at.'
   ),
   (
     'dsa-san-diego-2026-primary-guide',
@@ -101,7 +103,9 @@ VALUES
     'https://dsasandiego.org/dsa-san-diegos-june-2026-primary-voter-guide/',
     'official_source',
     DATE '2026-05-05',
-    'Local voter guide with federal, statewide, local, and ballot measure recommendations.'
+    'Local voter guide with federal, statewide, local, and ballot measure recommendations.',
+    DATE '2026-06-28',
+    'Manual review confirmed visible guide date and public source URL.'
   )
 ON CONFLICT (id) DO UPDATE
 SET
@@ -111,7 +115,9 @@ SET
   source_url = EXCLUDED.source_url,
   confidence = EXCLUDED.confidence,
   published_at = EXCLUDED.published_at,
-  summary = EXCLUDED.summary;
+  summary = EXCLUDED.summary,
+  reviewed_at = EXCLUDED.reviewed_at,
+  review_notes = EXCLUDED.review_notes;
 
 INSERT INTO ballot_measures (id, election_id, title, jurisdiction, measure_number, summary)
 VALUES
@@ -131,7 +137,7 @@ SET
   measure_number = EXCLUDED.measure_number,
   summary = EXCLUDED.summary;
 
-INSERT INTO endorsements (id, candidate_id, race_id, chapter_id, voter_guide_id, endorsement_type, source_url, source_date, confidence, notes)
+INSERT INTO endorsements (id, candidate_id, race_id, chapter_id, voter_guide_id, endorsement_type, source_url, source_date, confidence, notes, reviewed_at, review_notes)
 VALUES
   (
     'contreras-dsa-sd-2026-primary',
@@ -143,7 +149,9 @@ VALUES
     'https://dsasandiego.org/dsa-san-diegos-june-2026-primary-voter-guide/',
     DATE '2026-05-05',
     'official_source',
-    'Seeded from DSA San Diego voter guide wording; preserve recommendation language.'
+    'Seeded from DSA San Diego voter guide wording; preserve recommendation language.',
+    DATE '2026-06-28',
+    'Manual review confirmed source URL, source date, chapter, candidate, race, and recommendation wording.'
   ),
   (
     'mitra-dsa-sd-2026-primary',
@@ -155,7 +163,9 @@ VALUES
     'https://dsasandiego.org/dsa-san-diegos-june-2026-primary-voter-guide/',
     DATE '2026-05-05',
     'official_source',
-    'Seeded from DSA San Diego voter guide wording; preserve recommendation language.'
+    'Seeded from DSA San Diego voter guide wording; preserve recommendation language.',
+    DATE '2026-06-28',
+    'Manual review confirmed source URL, source date, chapter, candidate, race, and recommendation wording.'
   )
 ON CONFLICT (id) DO UPDATE
 SET
@@ -168,9 +178,11 @@ SET
   source_date = EXCLUDED.source_date,
   confidence = EXCLUDED.confidence,
   notes = EXCLUDED.notes,
+  reviewed_at = EXCLUDED.reviewed_at,
+  review_notes = EXCLUDED.review_notes,
   updated_at = now();
 
-INSERT INTO measure_positions (id, measure_id, chapter_id, position, source_url, confidence)
+INSERT INTO measure_positions (id, measure_id, chapter_id, position, source_url, confidence, reviewed_at, review_notes)
 VALUES
   (
     'san-diego-measure-a-dsa-sd-yes-2026-primary',
@@ -178,7 +190,9 @@ VALUES
     'dsa-san-diego',
     'yes',
     'https://dsasandiego.org/dsa-san-diegos-june-2026-primary-voter-guide/',
-    'official_source'
+    'official_source',
+    DATE '2026-06-28',
+    'Manual review confirmed source URL, chapter, ballot measure, and position wording.'
   )
 ON CONFLICT (id) DO UPDATE
 SET
@@ -186,6 +200,8 @@ SET
   chapter_id = EXCLUDED.chapter_id,
   position = EXCLUDED.position,
   source_url = EXCLUDED.source_url,
-  confidence = EXCLUDED.confidence;
+  confidence = EXCLUDED.confidence,
+  reviewed_at = EXCLUDED.reviewed_at,
+  review_notes = EXCLUDED.review_notes;
 
 COMMIT;

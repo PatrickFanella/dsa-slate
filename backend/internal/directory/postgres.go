@@ -355,7 +355,7 @@ func (s *PostgresStore) candidates(ctx context.Context) ([]Candidate, error) {
 func (s *PostgresStore) voterGuides(ctx context.Context, filter VoterGuideFilter) ([]VoterGuide, error) {
 	query := strings.Builder{}
 	query.WriteString(`
-		SELECT id, title, chapter_id, election_id, source_url, confidence, published_at, summary
+		SELECT id, title, chapter_id, election_id, source_url, confidence, published_at, summary, reviewed_at, review_notes
 		FROM voter_guides
 	`)
 
@@ -393,9 +393,11 @@ func (s *PostgresStore) voterGuides(ctx context.Context, filter VoterGuideFilter
 			confidence  sql.NullString
 			publishedAt sql.NullTime
 			summary     sql.NullString
+			reviewedAt  sql.NullTime
+			reviewNotes sql.NullString
 		)
 
-		if err := rows.Scan(&id, &title, &chapterID, &electionID, &sourceURL, &confidence, &publishedAt, &summary); err != nil {
+		if err := rows.Scan(&id, &title, &chapterID, &electionID, &sourceURL, &confidence, &publishedAt, &summary, &reviewedAt, &reviewNotes); err != nil {
 			return nil, fmt.Errorf("scan voter_guides: %w", err)
 		}
 
@@ -429,6 +431,8 @@ func (s *PostgresStore) voterGuides(ctx context.Context, filter VoterGuideFilter
 			Confidence:  requiredConfidence,
 			PublishedAt: optionalDate(publishedAt),
 			Summary:     optionalString(summary),
+			ReviewedAt:  optionalDate(reviewedAt),
+			ReviewNotes: optionalString(reviewNotes),
 		})
 	}
 	if err := rows.Err(); err != nil {
@@ -441,7 +445,7 @@ func (s *PostgresStore) voterGuides(ctx context.Context, filter VoterGuideFilter
 func (s *PostgresStore) endorsements(ctx context.Context, filter EndorsementFilter) ([]Endorsement, error) {
 	query := strings.Builder{}
 	query.WriteString(`
-		SELECT e.id, e.candidate_id, e.race_id, e.chapter_id, e.voter_guide_id, e.endorsement_type, e.source_url, e.source_date, e.confidence, e.notes
+		SELECT e.id, e.candidate_id, e.race_id, e.chapter_id, e.voter_guide_id, e.endorsement_type, e.source_url, e.source_date, e.confidence, e.notes, e.reviewed_at, e.review_notes
 		FROM endorsements e
 	`)
 
@@ -486,9 +490,11 @@ func (s *PostgresStore) endorsements(ctx context.Context, filter EndorsementFilt
 			sourceDate      sql.NullTime
 			confidence      sql.NullString
 			notes           sql.NullString
+			reviewedAt      sql.NullTime
+			reviewNotes     sql.NullString
 		)
 
-		if err := rows.Scan(&id, &candidateID, &raceID, &chapterID, &voterGuideID, &endorsementType, &sourceURL, &sourceDate, &confidence, &notes); err != nil {
+		if err := rows.Scan(&id, &candidateID, &raceID, &chapterID, &voterGuideID, &endorsementType, &sourceURL, &sourceDate, &confidence, &notes, &reviewedAt, &reviewNotes); err != nil {
 			return nil, fmt.Errorf("scan endorsements: %w", err)
 		}
 
@@ -532,6 +538,8 @@ func (s *PostgresStore) endorsements(ctx context.Context, filter EndorsementFilt
 			SourceDate:      optionalDate(sourceDate),
 			Confidence:      requiredConfidence,
 			Notes:           optionalString(notes),
+			ReviewedAt:      optionalDate(reviewedAt),
+			ReviewNotes:     optionalString(reviewNotes),
 		})
 	}
 	if err := rows.Err(); err != nil {
@@ -618,7 +626,7 @@ func (s *PostgresStore) ballotMeasures(ctx context.Context, filter BallotMeasure
 func (s *PostgresStore) measurePositions(ctx context.Context, filter MeasurePositionFilter) ([]MeasurePosition, error) {
 	query := strings.Builder{}
 	query.WriteString(`
-		SELECT id, measure_id, chapter_id, position, source_url, confidence
+		SELECT id, measure_id, chapter_id, position, source_url, confidence, reviewed_at, review_notes
 		FROM measure_positions
 	`)
 
@@ -648,15 +656,17 @@ func (s *PostgresStore) measurePositions(ctx context.Context, filter MeasurePosi
 	measurePositions := make([]MeasurePosition, 0)
 	for rows.Next() {
 		var (
-			id         sql.NullString
-			measureID  sql.NullString
-			chapterID  sql.NullString
-			position   sql.NullString
-			sourceURL  sql.NullString
-			confidence sql.NullString
+			id          sql.NullString
+			measureID   sql.NullString
+			chapterID   sql.NullString
+			position    sql.NullString
+			sourceURL   sql.NullString
+			confidence  sql.NullString
+			reviewedAt  sql.NullTime
+			reviewNotes sql.NullString
 		)
 
-		if err := rows.Scan(&id, &measureID, &chapterID, &position, &sourceURL, &confidence); err != nil {
+		if err := rows.Scan(&id, &measureID, &chapterID, &position, &sourceURL, &confidence, &reviewedAt, &reviewNotes); err != nil {
 			return nil, fmt.Errorf("scan measure_positions: %w", err)
 		}
 
@@ -686,12 +696,14 @@ func (s *PostgresStore) measurePositions(ctx context.Context, filter MeasurePosi
 		}
 
 		measurePositions = append(measurePositions, MeasurePosition{
-			ID:         positionID,
-			MeasureID:  requiredMeasureID,
-			ChapterID:  requiredChapterID,
-			Position:   requiredPosition,
-			SourceURL:  requiredSourceURL,
-			Confidence: requiredConfidence,
+			ID:          positionID,
+			MeasureID:   requiredMeasureID,
+			ChapterID:   requiredChapterID,
+			Position:    requiredPosition,
+			SourceURL:   requiredSourceURL,
+			Confidence:  requiredConfidence,
+			ReviewedAt:  optionalDate(reviewedAt),
+			ReviewNotes: optionalString(reviewNotes),
 		})
 	}
 	if err := rows.Err(); err != nil {

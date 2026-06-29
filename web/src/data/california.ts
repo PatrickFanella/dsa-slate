@@ -75,6 +75,8 @@ export const californiaDirectoryData: DirectoryData = {
       sourceUrl: 'https://www.californiadsa.org/voterguide',
       confidence: 'official_source',
       summary: 'Statewide guide and local chapter guide hub for California DSA electoral recommendations.',
+      reviewedAt: '2026-06-28',
+      reviewNotes: 'Manual review found no visible publication date on the public source page; do not invent publishedAt.',
     },
     {
       id: 'dsa-san-diego-2026-primary-guide',
@@ -85,6 +87,8 @@ export const californiaDirectoryData: DirectoryData = {
       confidence: 'official_source',
       publishedAt: '2026-05-05',
       summary: 'Local voter guide with federal, statewide, local, and ballot measure recommendations.',
+      reviewedAt: '2026-06-28',
+      reviewNotes: 'Manual review confirmed visible guide date and public source URL.',
     },
   ],
   endorsements: [
@@ -99,6 +103,8 @@ export const californiaDirectoryData: DirectoryData = {
       sourceDate: '2026-05-05',
       confidence: 'official_source',
       notes: 'Seeded from DSA San Diego voter guide wording; preserve recommendation language.',
+      reviewedAt: '2026-06-28',
+      reviewNotes: 'Manual review confirmed source URL, source date, chapter, candidate, race, and recommendation wording.',
     },
     {
       id: 'mitra-dsa-sd-2026-primary',
@@ -111,6 +117,8 @@ export const californiaDirectoryData: DirectoryData = {
       sourceDate: '2026-05-05',
       confidence: 'official_source',
       notes: 'Seeded from DSA San Diego voter guide wording; preserve recommendation language.',
+      reviewedAt: '2026-06-28',
+      reviewNotes: 'Manual review confirmed source URL, source date, chapter, candidate, race, and recommendation wording.',
     },
   ],
   ballotMeasures: [
@@ -131,6 +139,8 @@ export const californiaDirectoryData: DirectoryData = {
       position: 'yes',
       sourceUrl: 'https://dsasandiego.org/dsa-san-diegos-june-2026-primary-voter-guide/',
       confidence: 'official_source',
+      reviewedAt: '2026-06-28',
+      reviewNotes: 'Manual review confirmed source URL, chapter, ballot measure, and position wording.',
     },
   ],
 };

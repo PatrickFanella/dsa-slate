@@ -86,6 +86,8 @@ type VoterGuide struct {
 	Confidence  string `json:"confidence"`
 	PublishedAt string `json:"publishedAt,omitempty"`
 	Summary     string `json:"summary,omitempty"`
+	ReviewedAt  string `json:"reviewedAt,omitempty"`
+	ReviewNotes string `json:"reviewNotes,omitempty"`
 }
 
 type Endorsement struct {
@@ -99,6 +101,8 @@ type Endorsement struct {
 	SourceDate      string `json:"sourceDate,omitempty"`
 	Confidence      string `json:"confidence"`
 	Notes           string `json:"notes,omitempty"`
+	ReviewedAt      string `json:"reviewedAt,omitempty"`
+	ReviewNotes     string `json:"reviewNotes,omitempty"`
 }
 
 type BallotMeasure struct {
@@ -111,12 +115,14 @@ type BallotMeasure struct {
 }
 
 type MeasurePosition struct {
-	ID         string `json:"id"`
-	MeasureID  string `json:"measureId"`
-	ChapterID  string `json:"chapterId"`
-	Position   string `json:"position"`
-	SourceURL  string `json:"sourceUrl"`
-	Confidence string `json:"confidence"`
+	ID          string `json:"id"`
+	MeasureID   string `json:"measureId"`
+	ChapterID   string `json:"chapterId"`
+	Position    string `json:"position"`
+	SourceURL   string `json:"sourceUrl"`
+	Confidence  string `json:"confidence"`
+	ReviewedAt  string `json:"reviewedAt,omitempty"`
+	ReviewNotes string `json:"reviewNotes,omitempty"`
 }
 
 type DirectoryData struct {

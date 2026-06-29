@@ -88,8 +88,11 @@ func EvaluateQuality(data DirectoryData, options QualityOptions) QualityReport {
 		report.requireOptionalReference(record, "electionId", guide.ElectionID, index.elections)
 		report.requireSourceURL(record, guide.SourceURL)
 		report.warnWeakConfidence(record, guide.Confidence)
+		hasReviewMetadata := report.validateReviewMetadata(record, guide.ReviewedAt, guide.ReviewNotes)
 		if guide.PublishedAt == "" {
-			report.add(QualityWarn, record, "missing publishedAt")
+			if !hasReviewMetadata {
+				report.add(QualityWarn, record, "missing publishedAt")
+			}
 		} else {
 			report.warnIfStale(record, "publishedAt", guide.PublishedAt, referenceDate, staleAfterDays)
 		}
@@ -103,8 +106,11 @@ func EvaluateQuality(data DirectoryData, options QualityOptions) QualityReport {
 		report.requireOptionalReference(record, "voterGuideId", endorsement.VoterGuideID, index.voterGuides)
 		report.requireSourceURL(record, endorsement.SourceURL)
 		report.warnWeakConfidence(record, endorsement.Confidence)
+		hasReviewMetadata := report.validateReviewMetadata(record, endorsement.ReviewedAt, endorsement.ReviewNotes)
 		if endorsement.SourceDate == "" {
-			report.add(QualityWarn, record, "missing sourceDate")
+			if !hasReviewMetadata {
+				report.add(QualityWarn, record, "missing sourceDate")
+			}
 		} else {
 			report.warnIfStale(record, "sourceDate", endorsement.SourceDate, referenceDate, staleAfterDays)
 		}
@@ -124,6 +130,7 @@ func EvaluateQuality(data DirectoryData, options QualityOptions) QualityReport {
 		report.requireReference(record, "chapterId", position.ChapterID, index.chapters)
 		report.requireSourceURL(record, position.SourceURL)
 		report.warnWeakConfidence(record, position.Confidence)
+		report.validateReviewMetadata(record, position.ReviewedAt, position.ReviewNotes)
 		if position.Position == "unknown" {
 			report.add(QualityWarn, record, "position unknown requires manual review")
 		}
@@ -140,6 +147,27 @@ func (r *QualityReport) requireSourceURL(record string, sourceURL string) {
 	if strings.TrimSpace(sourceURL) == "" {
 		r.add(QualityFail, record, "missing sourceUrl")
 	}
+}
+
+func (r *QualityReport) validateReviewMetadata(record string, reviewedAt string, reviewNotes string) bool {
+	reviewedAt = strings.TrimSpace(reviewedAt)
+	reviewNotes = strings.TrimSpace(reviewNotes)
+	if reviewedAt == "" && reviewNotes == "" {
+		return false
+	}
+	if reviewedAt == "" {
+		r.add(QualityWarn, record, "missing reviewedAt for reviewNotes")
+		return false
+	}
+	if _, err := time.Parse("2006-01-02", reviewedAt); err != nil {
+		r.add(QualityWarn, record, "reviewedAt must be YYYY-MM-DD")
+		return false
+	}
+	if reviewNotes == "" {
+		r.add(QualityWarn, record, "missing reviewNotes for reviewedAt")
+		return false
+	}
+	return true
 }
 
 func (r *QualityReport) warnWeakConfidence(record string, confidence string) {

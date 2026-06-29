@@ -65,6 +65,8 @@ export type VoterGuide = {
   confidence: ConfidenceLevel;
   publishedAt?: string;
   summary?: string;
+  reviewedAt?: string;
+  reviewNotes?: string;
 };
 
 export type Endorsement = {
@@ -78,6 +80,8 @@ export type Endorsement = {
   sourceDate?: string;
   confidence: ConfidenceLevel;
   notes?: string;
+  reviewedAt?: string;
+  reviewNotes?: string;
 };
 
 export type BallotMeasure = {
@@ -96,6 +100,8 @@ export type MeasurePosition = {
   position: 'yes' | 'no' | 'no_recommendation' | 'opposed' | 'unknown';
   sourceUrl: string;
   confidence: ConfidenceLevel;
+  reviewedAt?: string;
+  reviewNotes?: string;
 };
 
 export type DirectoryData = {
@@ -273,6 +279,7 @@ export function validateDirectoryData(data: DirectoryData): string[] {
     validateOptionalReference(`voterGuides[${guide.id}]`, 'electionId', guide.electionId, 'elections', electionIds, errors);
     validateRequiredUrl(`voterGuides[${guide.id}]`, 'sourceUrl', guide.sourceUrl, errors);
     validateOptionalIsoDate(`voterGuides[${guide.id}]`, 'publishedAt', guide.publishedAt, errors);
+    validateOptionalIsoDate(`voterGuides[${guide.id}]`, 'reviewedAt', guide.reviewedAt, errors);
   }
 
   for (const endorsement of data.endorsements) {
@@ -310,6 +317,7 @@ export function validateDirectoryData(data: DirectoryData): string[] {
     );
     validateRequiredUrl(`endorsements[${endorsement.id}]`, 'sourceUrl', endorsement.sourceUrl, errors);
     validateOptionalIsoDate(`endorsements[${endorsement.id}]`, 'sourceDate', endorsement.sourceDate, errors);
+    validateOptionalIsoDate(`endorsements[${endorsement.id}]`, 'reviewedAt', endorsement.reviewedAt, errors);
   }
 
   for (const measure of data.ballotMeasures) {
@@ -341,6 +349,7 @@ export function validateDirectoryData(data: DirectoryData): string[] {
       errors,
     );
     validateRequiredUrl(`measurePositions[${position.id}]`, 'sourceUrl', position.sourceUrl, errors);
+    validateOptionalIsoDate(`measurePositions[${position.id}]`, 'reviewedAt', position.reviewedAt, errors);
   }
 
   return errors;

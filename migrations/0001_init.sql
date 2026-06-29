@@ -47,6 +47,8 @@ CREATE TABLE IF NOT EXISTS voter_guides (
   confidence text NOT NULL DEFAULT 'needs_review',
   published_at date,
   summary text,
+  reviewed_at date,
+  review_notes text,
   CONSTRAINT voter_guides_confidence_check CHECK (
     confidence IN ('official_source', 'official_social_source', 'campaign_source', 'press_source', 'needs_review')
   )
@@ -66,6 +68,8 @@ CREATE TABLE IF NOT EXISTS endorsements (
   source_date date,
   confidence text NOT NULL DEFAULT 'needs_review',
   notes text,
+  reviewed_at date,
+  review_notes text,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT endorsements_type_check CHECK (
@@ -92,6 +96,8 @@ CREATE TABLE IF NOT EXISTS measure_positions (
   position text NOT NULL,
   source_url text NOT NULL,
   confidence text NOT NULL DEFAULT 'needs_review',
+  reviewed_at date,
+  review_notes text,
   CONSTRAINT measure_positions_position_check CHECK (position IN ('yes', 'no', 'no_recommendation', 'opposed', 'unknown')),
   CONSTRAINT measure_positions_confidence_check CHECK (
     confidence IN ('official_source', 'official_social_source', 'campaign_source', 'press_source', 'needs_review')
@@ -109,10 +115,18 @@ ALTER TABLE races
 ALTER TABLE voter_guides
   ALTER COLUMN chapter_id SET NOT NULL;
 
+ALTER TABLE voter_guides
+  ADD COLUMN IF NOT EXISTS reviewed_at date,
+  ADD COLUMN IF NOT EXISTS review_notes text;
+
 ALTER TABLE endorsements
   ALTER COLUMN candidate_id SET NOT NULL,
   ALTER COLUMN race_id SET NOT NULL,
   ALTER COLUMN chapter_id SET NOT NULL;
+
+ALTER TABLE endorsements
+  ADD COLUMN IF NOT EXISTS reviewed_at date,
+  ADD COLUMN IF NOT EXISTS review_notes text;
 
 ALTER TABLE ballot_measures
   ALTER COLUMN election_id SET NOT NULL,
@@ -121,3 +135,7 @@ ALTER TABLE ballot_measures
 ALTER TABLE measure_positions
   ALTER COLUMN measure_id SET NOT NULL,
   ALTER COLUMN chapter_id SET NOT NULL;
+
+ALTER TABLE measure_positions
+  ADD COLUMN IF NOT EXISTS reviewed_at date,
+  ADD COLUMN IF NOT EXISTS review_notes text;

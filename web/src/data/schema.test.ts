@@ -68,6 +68,65 @@ describe('directory schema helpers', () => {
     );
   });
 
+  it('validates optional editorial reviewedAt dates', () => {
+    const data: DirectoryData = {
+      chapters: [{ id: 'dsa-san-diego', name: 'DSA San Diego', state: 'CA' }],
+      elections: [{ id: '2026-ca-primary', name: '2026 California Primary' }],
+      races: [
+        {
+          id: 'ca-48-us-house-2026-primary',
+          electionId: '2026-ca-primary',
+          office: 'U.S. House',
+          level: 'federal',
+          jurisdiction: 'CA-48',
+        },
+      ],
+      candidates: [{ id: 'corinna-contreras', name: 'Corinna Contreras' }],
+      voterGuides: [
+        {
+          id: 'guide-1',
+          title: 'Guide',
+          chapterId: 'dsa-san-diego',
+          sourceUrl: 'https://example.org/guide',
+          confidence: 'official_source',
+          reviewedAt: 'June 28, 2026',
+        },
+      ],
+      endorsements: [
+        {
+          id: 'endorsement-1',
+          candidateId: 'corinna-contreras',
+          raceId: 'ca-48-us-house-2026-primary',
+          chapterId: 'dsa-san-diego',
+          endorsementType: 'recommended',
+          sourceUrl: 'https://example.org/guide',
+          confidence: 'official_source',
+          reviewedAt: '2026-02-31',
+        },
+      ],
+      ballotMeasures: [{ id: 'measure-a', electionId: '2026-ca-primary', title: 'Measure A', jurisdiction: 'San Diego, CA' }],
+      measurePositions: [
+        {
+          id: 'measure-position-1',
+          measureId: 'measure-a',
+          chapterId: 'dsa-san-diego',
+          position: 'yes',
+          sourceUrl: 'https://example.org/guide',
+          confidence: 'official_source',
+          reviewedAt: 'not-a-date',
+        },
+      ],
+    };
+
+    expect(validateDirectoryData(data)).toEqual(
+      expect.arrayContaining([
+        'voterGuides[guide-1].reviewedAt must be YYYY-MM-DD',
+        'endorsements[endorsement-1].reviewedAt must be YYYY-MM-DD',
+        'measurePositions[measure-position-1].reviewedAt must be YYYY-MM-DD',
+      ]),
+    );
+  });
+
   it('rejects impossible calendar dates in YYYY-MM-DD format', () => {
     const data: DirectoryData = {
       chapters: [{ id: 'dsa-san-diego', name: 'DSA San Diego', state: 'CA' }],

@@ -61,11 +61,13 @@ func TestDirectoryUsesCamelCaseFieldNames(t *testing.T) {
 	handler := NewServer(directory.NewMemoryStore(directory.DirectoryData{
 		Chapters: []directory.Chapter{{ID: "chap-1", Name: "Chapter 1", State: "CA", Active: false}},
 		VoterGuides: []directory.VoterGuide{{
-			ID:         "guide-1",
-			Title:      "Guide 1",
-			ChapterID:  "chap-1",
-			SourceURL:  "https://example.com/guide",
-			Confidence: "needs_review",
+			ID:          "guide-1",
+			Title:       "Guide 1",
+			ChapterID:   "chap-1",
+			SourceURL:   "https://example.com/guide",
+			Confidence:  "needs_review",
+			ReviewedAt:  "2026-06-28",
+			ReviewNotes: "Manual review documented no visible source date.",
 		}},
 		Candidates: []directory.Candidate{{ID: "cand-1", Name: "Candidate 1", Incumbent: false}},
 		MeasurePositions: []directory.MeasurePosition{{
@@ -108,6 +110,18 @@ func TestDirectoryUsesCamelCaseFieldNames(t *testing.T) {
 	}
 	if _, ok := guide["source_url"]; ok {
 		t.Fatalf("unexpected snake_case source_url in voter guide: %#v", guide)
+	}
+	if got := guide["reviewedAt"]; got != "2026-06-28" {
+		t.Fatalf("reviewedAt = %#v, want 2026-06-28", got)
+	}
+	if _, ok := guide["reviewed_at"]; ok {
+		t.Fatalf("unexpected snake_case reviewed_at in voter guide: %#v", guide)
+	}
+	if got := guide["reviewNotes"]; got != "Manual review documented no visible source date." {
+		t.Fatalf("reviewNotes = %#v, want documented review note", got)
+	}
+	if _, ok := guide["review_notes"]; ok {
+		t.Fatalf("unexpected snake_case review_notes in voter guide: %#v", guide)
 	}
 
 	chapters := got["chapters"].([]any)

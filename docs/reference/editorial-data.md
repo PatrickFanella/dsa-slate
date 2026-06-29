@@ -53,6 +53,15 @@ Until a reviewed admin API exists, all public records are added through reviewed
 
 The data-quality command is a metadata check, not a truth oracle. Human review still decides whether a source is official enough and whether a record should be published.
 
+## Editorial review metadata
+
+Source-bearing public records may include:
+
+- `reviewedAt` — the date an editor manually reviewed the source, formatted `YYYY-MM-DD`.
+- `reviewNotes` — a short explanation of what was checked or why source metadata is absent.
+
+Use review metadata when a public source is valid but lacks a visible publication/source date. Do not invent `publishedAt` or `sourceDate`. A documented review can suppress missing-date data-quality warnings, but it does not prove the record is true or current.
+
 ## Automated seed validation
 
 `web/src/data/schema.ts` enforces local metadata integrity for checked-in seed data.
@@ -72,4 +81,4 @@ The validator does not prove that an endorsement is true, current, or legally us
 
 `make data-quality` seeds local Postgres and runs `backend/cmd/dataquality` against the read model.
 
-The report fails on missing source URLs for public voter-guide, endorsement, and measure-position records. It warns on stale dates, missing dates, weak confidence labels, and unknown public positions. Warnings are allowed during early seed expansion, but they should be resolved or explained before an admin/write API is introduced.
+The report fails on missing source URLs for public voter-guide, endorsement, and measure-position records. It warns on stale dates, missing dates, weak confidence labels, and unknown public positions. A documented editorial review can suppress missing-date warnings for source-bearing records when the visible source date is absent. Warnings are allowed during early seed expansion, but they should be resolved or explained before an admin/write API is introduced.
