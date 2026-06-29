@@ -161,3 +161,60 @@ ALTER TABLE measure_positions
 ALTER TABLE measure_positions
   ADD COLUMN IF NOT EXISTS reviewed_at date,
   ADD COLUMN IF NOT EXISTS review_notes text;
+
+CREATE TABLE IF NOT EXISTS admin_chapter_drafts (
+  id text PRIMARY KEY,
+  chapter_id text NOT NULL,
+  status text NOT NULL DEFAULT 'draft',
+  name text NOT NULL,
+  state text NOT NULL,
+  website_url text,
+  official_dsa_url text,
+  coverage_notes text,
+  group_email text,
+  linktree_url text,
+  facebook_url text,
+  twitter_url text,
+  bluesky_url text,
+  instagram_url text,
+  blog_url text,
+  event_calendar_url text,
+  email_list_url text,
+  review_notes text,
+  reviewed_at date,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT admin_chapter_drafts_status_check CHECK (status IN ('draft', 'needs_review', 'published', 'archived'))
+);
+
+CREATE TABLE IF NOT EXISTS admin_endorsement_drafts (
+  id text PRIMARY KEY,
+  endorsement_id text NOT NULL,
+  status text NOT NULL DEFAULT 'draft',
+  candidate_id text NOT NULL,
+  race_id text NOT NULL,
+  chapter_id text NOT NULL,
+  voter_guide_id text,
+  endorsement_type text NOT NULL,
+  source_url text NOT NULL,
+  source_date date,
+  confidence text NOT NULL DEFAULT 'needs_review',
+  notes text,
+  review_notes text,
+  reviewed_at date,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT admin_endorsement_drafts_status_check CHECK (status IN ('draft', 'needs_review', 'published', 'archived')),
+  CONSTRAINT admin_endorsement_drafts_type_check CHECK (endorsement_type IN ('endorsed', 'recommended', 'opposed', 'no_recommendation', 'write_in', 'coalition', 'unknown')),
+  CONSTRAINT admin_endorsement_drafts_confidence_check CHECK (confidence IN ('official_source', 'official_social_source', 'campaign_source', 'press_source', 'needs_review'))
+);
+
+CREATE TABLE IF NOT EXISTS admin_audit_events (
+  id bigserial PRIMARY KEY,
+  actor text NOT NULL,
+  action text NOT NULL,
+  record_type text NOT NULL,
+  record_id text NOT NULL,
+  message text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
