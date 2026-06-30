@@ -38,6 +38,11 @@ func TestHealthz(t *testing.T) {
 	}
 }
 
+func addCSRF(req *http.Request) {
+	req.Header.Set("X-DSA-Slate-CSRF", "1")
+	req.Header.Set("Origin", "http://localhost:5173")
+}
+
 func TestDirectoryEmptyCollectionsAreArrays(t *testing.T) {
 	handler := NewServer(directory.NewMemoryStore(directory.DirectoryData{}))
 	rec := httptest.NewRecorder()
@@ -586,6 +591,7 @@ func TestAuthLogoutClearsCookieAndDeletesSession(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/logout", nil)
 	req.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: "session-1"})
+	addCSRF(req)
 
 	handler.ServeHTTP(rec, req)
 
@@ -604,6 +610,23 @@ func TestAuthLogoutClearsCookieAndDeletesSession(t *testing.T) {
 	}
 	if body.Authenticated {
 		t.Fatalf("authenticated = true, want false")
+	}
+}
+
+func TestAuthLogoutRejectsMissingCSRF(t *testing.T) {
+	store := &testAuthStore{sessions: map[string]auth.Session{"session-1": {ID: "session-1", UserID: "user-1", ExpiresAt: time.Now().UTC().Add(time.Hour)}}}
+	handler := NewServerWithAuthAndServices(directory.NewMemoryStore(directory.DirectoryData{}), store, nil, nil, nil, "", nil)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/logout", nil)
+	req.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: "session-1"})
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusForbidden)
+	}
+	if _, ok := store.sessions["session-1"]; !ok {
+		t.Fatal("session was deleted despite CSRF failure")
 	}
 }
 
@@ -627,6 +650,7 @@ func TestSavedSlateListAndUpsertForAuthenticatedUser(t *testing.T) {
 	putRec := httptest.NewRecorder()
 	putReq := httptest.NewRequest(http.MethodPut, "/api/me/slate/items", strings.NewReader(`{"recordType":"endorsement","recordId":"endorsement-1"}`))
 	putReq.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: "session-1"})
+	addCSRF(putReq)
 	handler.ServeHTTP(putRec, putReq)
 
 	if putRec.Code != http.StatusOK {
@@ -672,12 +696,31 @@ func TestSavedSlateCanSaveMeasurePositionsAndVoterGuides(t *testing.T) {
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodPut, "/api/me/slate/items", strings.NewReader(body))
 		req.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: "session-1"})
+		addCSRF(req)
 
 		handler.ServeHTTP(rec, req)
 
 		if rec.Code != http.StatusOK {
 			t.Fatalf("status = %d, want %d for %s", rec.Code, http.StatusOK, body)
 		}
+	}
+}
+
+func TestSavedSlateWriteRejectsMissingCSRF(t *testing.T) {
+	store := &testSavedSlateStore{}
+	authStore := newTestAuthStoreWithSession("session-1", auth.User{ID: "user-1", Email: "reader@example.org", Role: auth.RoleUser})
+	handler := NewServerWithAuthAndServices(directory.NewMemoryStore(directory.DirectoryData{}), authStore, nil, nil, store, "", nil)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPut, "/api/me/slate/items", strings.NewReader(`{"recordType":"endorsement","recordId":"endorsement-1"}`))
+	req.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: "session-1"})
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusForbidden)
+	}
+	if store.lastUserID != "" {
+		t.Fatalf("store was called despite CSRF failure: %#v", store)
 	}
 }
 
@@ -692,6 +735,7 @@ func TestSavedSlateDeleteRequiresOwner(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodDelete, "/api/me/slate/items/item-1", nil)
 	req.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: "session-1"})
+	addCSRF(req)
 
 	handler.ServeHTTP(rec, req)
 
@@ -707,6 +751,7 @@ func TestSavedSlateRejectsInvalidReference(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPut, "/api/me/slate/items", strings.NewReader(`{"recordType":"endorsement","recordId":"missing"}`))
 	req.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: "session-1"})
+	addCSRF(req)
 
 	handler.ServeHTTP(rec, req)
 
@@ -722,6 +767,7 @@ func TestSavedSlateRejectsInvalidRecordType(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPut, "/api/me/slate/items", strings.NewReader(`{"recordType":"candidate","recordId":"candidate-1"}`))
 	req.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: "session-1"})
+	addCSRF(req)
 
 	handler.ServeHTTP(rec, req)
 
@@ -767,6 +813,7 @@ func TestAdminCreateChapterDraftAllowsEditorAndRecordsActor(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/admin/chapter-drafts", strings.NewReader(`{"id":"draft-1","chapterId":"chapter-1","name":"Chapter 1","state":"CA"}`))
 	req.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: "session-1"})
+	addCSRF(req)
 
 	handler.ServeHTTP(rec, req)
 
@@ -786,6 +833,46 @@ func TestAdminCreateChapterDraftAllowsEditorAndRecordsActor(t *testing.T) {
 	}
 }
 
+func TestAdminWriteRejectsBadCSRFOrigin(t *testing.T) {
+	store := &testAdminStore{}
+	authStore := newTestAuthStoreWithSession("session-1", auth.User{ID: "editor-1", Email: "editor@example.org", Role: auth.RoleEditor})
+	handler := NewServerWithAuthAndServices(directory.NewMemoryStore(directory.DirectoryData{}), authStore, nil, store, nil, "", nil)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/chapter-drafts", strings.NewReader(`{"id":"draft-1","chapterId":"chapter-1","name":"Chapter 1","state":"CA"}`))
+	req.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: "session-1"})
+	req.Header.Set("X-DSA-Slate-CSRF", "1")
+	req.Header.Set("Origin", "https://evil.example")
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusForbidden)
+	}
+	if store.lastActor != "" {
+		t.Fatalf("store was called despite CSRF failure: %#v", store)
+	}
+}
+
+func TestAdminWriteRejectsCrossSiteFetchMetadata(t *testing.T) {
+	store := &testAdminStore{}
+	authStore := newTestAuthStoreWithSession("session-1", auth.User{ID: "editor-1", Email: "editor@example.org", Role: auth.RoleEditor})
+	handler := NewServerWithAuthAndServices(directory.NewMemoryStore(directory.DirectoryData{}), authStore, nil, store, nil, "", nil)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/chapter-drafts", strings.NewReader(`{"id":"draft-1","chapterId":"chapter-1","name":"Chapter 1","state":"CA"}`))
+	req.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: "session-1"})
+	addCSRF(req)
+	req.Header.Set("Sec-Fetch-Site", "cross-site")
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusForbidden)
+	}
+	if store.lastActor != "" {
+		t.Fatalf("store was called despite CSRF failure: %#v", store)
+	}
+}
+
 func TestAdminCreateChapterDraftAllowsAdminAndRecordsIDActor(t *testing.T) {
 	store := &testAdminStore{}
 	authStore := newTestAuthStoreWithSession("session-1", auth.User{ID: "admin-1", Role: auth.RoleAdmin})
@@ -793,6 +880,7 @@ func TestAdminCreateChapterDraftAllowsAdminAndRecordsIDActor(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/admin/chapter-drafts", strings.NewReader(`{"id":"draft-1","chapterId":"chapter-1","name":"Chapter 1","state":"CA"}`))
 	req.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: "session-1"})
+	addCSRF(req)
 
 	handler.ServeHTTP(rec, req)
 
@@ -810,6 +898,7 @@ func TestAdminCreateChapterDraftValidationFailure(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/admin/chapter-drafts", strings.NewReader(`{"id":"draft-1","chapterId":"chapter-1","name":"Chapter 1","state":"CA","websiteUrl":"ftp://example.com"}`))
 	req.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: "session-1"})
+	addCSRF(req)
 
 	handler.ServeHTTP(rec, req)
 

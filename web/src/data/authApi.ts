@@ -30,5 +30,5 @@ export async function fetchAuthSession(fetcher: typeof fetch = fetch): Promise<A
 }
 
 export async function logout(fetcher: typeof fetch = fetch): Promise<AuthState> {
-  return fetchAuthJson<AuthState>(fetcher, '/api/auth/logout', { method: 'POST' });
+  return fetchAuthJson<AuthState>(fetcher, '/api/auth/logout', { method: 'POST', headers: { 'X-DSA-Slate-CSRF': '1' } });
 }

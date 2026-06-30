@@ -280,7 +280,7 @@ Current slice covers endorsement, measure-position, and voter-guide saved items.
 
 ### CSRF
 
-Cookie-authenticated writes require CSRF protection.
+Cookie-authenticated writes require same-origin CSRF protection. The private-alpha implementation uses a non-simple `X-DSA-Slate-CSRF: 1` header, same-origin `Origin`/`Referer` validation against `APP_BASE_URL`, and cross-site Fetch Metadata rejection.
 
 Protected write groups:
 

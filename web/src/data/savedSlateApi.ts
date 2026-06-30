@@ -35,6 +35,7 @@ export async function fetchSavedSlate(fetcher: typeof fetch = fetch): Promise<Sa
 export async function saveSlateItem(recordType: SavedSlateRecordType, recordId: string, fetcher: typeof fetch = fetch): Promise<SavedSlateItem> {
   return requestSavedSlateJson<SavedSlateItem>(fetcher, '/api/me/slate/items', {
     method: 'PUT',
+    headers: { 'X-DSA-Slate-CSRF': '1' },
     body: JSON.stringify({ recordType, recordId }),
   });
 }
@@ -42,5 +43,6 @@ export async function saveSlateItem(recordType: SavedSlateRecordType, recordId: 
 export async function deleteSlateItem(itemId: string, fetcher: typeof fetch = fetch): Promise<{ ok: boolean }> {
   return requestSavedSlateJson<{ ok: boolean }>(fetcher, `/api/me/slate/items/${encodeURIComponent(itemId)}`, {
     method: 'DELETE',
+    headers: { 'X-DSA-Slate-CSRF': '1' },
   });
 }

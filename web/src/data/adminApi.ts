@@ -90,6 +90,13 @@ function adminHeaders(hasBody: boolean): HeadersInit {
   };
 }
 
+function csrfHeader(method?: string): HeadersInit {
+  if (!method || method.toUpperCase() === 'GET') {
+    return {};
+  }
+  return { 'X-DSA-Slate-CSRF': '1' };
+}
+
 async function readResponseBody(response: Response): Promise<unknown> {
   const contentType = response.headers.get('Content-Type') ?? '';
   if (!contentType.includes('application/json')) {
@@ -127,6 +134,7 @@ async function requestAdminJson<T>(
     ...init,
     headers: {
       ...adminHeaders(Boolean(init.body)),
+      ...csrfHeader(init.method),
       ...(init.headers ?? {}),
     },
   });

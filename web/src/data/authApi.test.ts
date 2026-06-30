@@ -27,7 +27,10 @@ describe('authApi', () => {
 
     expect(fetcher).toHaveBeenCalledWith('/api/auth/logout', expect.objectContaining({ headers: expect.any(Headers), method: 'POST' }));
     const [, options] = fetcher.mock.calls[0] as unknown as [RequestInfo | URL, RequestInit?];
-    expect([...new Headers(options?.headers).entries()]).toEqual([['accept', 'application/json']]);
+    expect([...new Headers(options?.headers).entries()]).toEqual([
+      ['accept', 'application/json'],
+      ['x-dsa-slate-csrf', '1'],
+    ]);
     expect(state).toEqual({ authenticated: false });
   });
 

@@ -87,6 +87,12 @@ See `docs/reference/civic-api.md` for the privacy and response contract.
 
 Saved slate endpoints require a valid `dsa_slate_session` cookie for any authenticated user. They store references to public endorsements, measure positions, and voter guides; they do not store raw voter addresses.
 
+State-changing cookie-authenticated requests must include the same-origin write header:
+
+```http
+X-DSA-Slate-CSRF: 1
+```
+
 `GET /api/me/slate`
 
 - Returns the current user's saved public-record items:
@@ -111,6 +117,7 @@ Saved slate endpoints require a valid `dsa_slate_session` cookie for any authent
 ## Admin draft endpoints
 
 All admin endpoints require a valid `dsa_slate_session` cookie for a user with role `editor` or `admin`.
+State-changing admin requests also require `X-DSA-Slate-CSRF: 1` from the same app origin.
 
 They are intended for local/editorial use only and operate on draft records before publishing into the public read tables. The frontend draft console is available at `/admin` and uses the signed-in session; it does not collect or send bearer tokens from the browser. `ADMIN_API_TOKEN` remains only as a temporary local/server fallback when an auth store is not wired.
 
@@ -137,6 +144,12 @@ Authenticated users without `editor` or `admin` role return:
 
 ```json
 {"error":"forbidden","message":"editor or admin role required"}
+```
+
+CSRF failures return:
+
+```json
+{"error":"csrf_failed"}
 ```
 
 Validation errors return:

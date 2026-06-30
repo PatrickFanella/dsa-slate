@@ -30,6 +30,7 @@ describe('savedSlateApi', () => {
     expect([...new Headers(options?.headers).entries()]).toEqual([
       ['accept', 'application/json'],
       ['content-type', 'application/json'],
+      ['x-dsa-slate-csrf', '1'],
     ]);
     expect(item).toEqual(body);
   });
@@ -50,6 +51,8 @@ describe('savedSlateApi', () => {
     const result = await deleteSlateItem('item/1', fetcher);
 
     expect(fetcher).toHaveBeenCalledWith('/api/me/slate/items/item%2F1', expect.objectContaining({ method: 'DELETE' }));
+    const [, options] = fetcher.mock.calls[0] as unknown as [RequestInfo | URL, RequestInit?];
+    expect(new Headers(options?.headers).get('X-DSA-Slate-CSRF')).toBe('1');
     expect(result).toEqual({ ok: true });
   });
 

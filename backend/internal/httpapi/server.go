@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -397,6 +398,10 @@ func (s *Server) authGoogleCallback(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) authLogout(w http.ResponseWriter, r *http.Request) {
+	if !s.requireCSRF(w, r) {
+		return
+	}
+
 	http.SetCookie(w, &http.Cookie{
 		Name:     auth.SessionCookieName,
 		Value:    "",
@@ -446,6 +451,9 @@ func (s *Server) savedSlateItemCollection(w http.ResponseWriter, r *http.Request
 	if !ok {
 		return
 	}
+	if !s.requireCSRF(w, r) {
+		return
+	}
 	request, ok := s.decodeSavedSlateItem(w, r)
 	if !ok {
 		return
@@ -469,6 +477,9 @@ func (s *Server) savedSlateItem(w http.ResponseWriter, r *http.Request) {
 	}
 	user, ok := s.requireUserAuth(w, r)
 	if !ok {
+		return
+	}
+	if !s.requireCSRF(w, r) {
 		return
 	}
 	itemID := strings.TrimPrefix(r.URL.Path, "/api/me/slate/items/")
@@ -842,6 +853,9 @@ func (s *Server) requireAdminAuth(w http.ResponseWriter, r *http.Request) (strin
 			s.forbidden(w)
 			return "", false
 		}
+		if isUnsafeMethod(r.Method) && !s.requireCSRF(w, r) {
+			return "", false
+		}
 		return authActor(state.User), true
 	}
 
@@ -884,6 +898,57 @@ func (s *Server) unauthorized(w http.ResponseWriter) {
 
 func (s *Server) forbidden(w http.ResponseWriter) {
 	s.writeJSON(w, http.StatusForbidden, map[string]string{"error": "forbidden", "message": "editor or admin role required"})
+}
+
+func (s *Server) csrfFailed(w http.ResponseWriter) {
+	s.writeJSON(w, http.StatusForbidden, map[string]string{"error": "csrf_failed"})
+}
+
+func (s *Server) requireCSRF(w http.ResponseWriter, r *http.Request) bool {
+	if !isUnsafeMethod(r.Method) {
+		return true
+	}
+	if r.Header.Get("X-DSA-Slate-CSRF") != "1" {
+		s.csrfFailed(w)
+		return false
+	}
+	if strings.EqualFold(r.Header.Get("Sec-Fetch-Site"), "cross-site") {
+		s.csrfFailed(w)
+		return false
+	}
+	if origin := strings.TrimSpace(r.Header.Get("Origin")); origin != "" {
+		if sameAppOrigin(origin) {
+			return true
+		}
+		s.csrfFailed(w)
+		return false
+	}
+	if referer := strings.TrimSpace(r.Header.Get("Referer")); referer != "" && sameAppOrigin(referer) {
+		return true
+	}
+	s.csrfFailed(w)
+	return false
+}
+
+func isUnsafeMethod(method string) bool {
+	switch method {
+	case http.MethodGet, http.MethodHead, http.MethodOptions:
+		return false
+	default:
+		return true
+	}
+}
+
+func sameAppOrigin(rawURL string) bool {
+	requestURL, err := url.Parse(rawURL)
+	if err != nil {
+		return false
+	}
+	appURL, err := url.Parse(app.AppBaseURL())
+	if err != nil {
+		return false
+	}
+	return strings.EqualFold(requestURL.Scheme, appURL.Scheme) && strings.EqualFold(requestURL.Host, appURL.Host)
 }
 
 func (s *Server) writeAdminStoreError(w http.ResponseWriter, err error) {

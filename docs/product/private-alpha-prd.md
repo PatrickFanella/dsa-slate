@@ -228,7 +228,7 @@ Post-alpha should add:
 - Passwords must be hashed with a modern password hashing scheme if email/password ships.
 - Sessions must be HTTP-only and same-site.
 - Admin routes must require authenticated `editor` or `admin` role.
-- CSRF protection is required for cookie-authenticated writes.
+- Cookie-authenticated writes must require same-origin CSRF protection.
 - Audit admin write actions.
 
 ### Data integrity
