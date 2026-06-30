@@ -71,6 +71,7 @@ describe('App', () => {
     expect(html).toContain('Switch to dark theme');
     expect(html).toMatch(/Light.*theme/);
     expect(html).toContain('How this directory is built');
+    expect(html).toContain('Sign in with Google');
     expect(html).toContain('Voter guides');
     expect(html).toContain('Search this source-linked directory');
     expect(html).toContain('Browse filters use public API fields. Text search stays local. Raw addresses are not stored.');

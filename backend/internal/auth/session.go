@@ -28,6 +28,14 @@ type Session struct {
 	CreatedAt time.Time `json:"createdAt"`
 }
 
+// OAuthIdentity links a local user record to an external OAuth identity.
+type OAuthIdentity struct {
+	Provider        string    `json:"provider"`
+	ProviderSubject string    `json:"providerSubject"`
+	UserID          string    `json:"userId"`
+	CreatedAt       time.Time `json:"createdAt"`
+}
+
 // Summary is the minimal user payload returned to the browser.
 type Summary struct {
 	ID    string `json:"id"`
@@ -46,6 +54,8 @@ type Store interface {
 	UpsertUser(context.Context, User) (User, error)
 	GetUser(context.Context, string) (User, error)
 	GetUserByEmail(context.Context, string) (User, error)
+	UpsertOAuthIdentity(context.Context, OAuthIdentity) (OAuthIdentity, error)
+	GetOAuthIdentity(context.Context, string, string) (OAuthIdentity, error)
 	CreateSession(context.Context, Session) (Session, error)
 	GetSession(context.Context, string) (Session, error)
 	DeleteSession(context.Context, string) error

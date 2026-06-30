@@ -58,6 +58,28 @@ func (s *PostgresStore) GetUserByEmail(ctx context.Context, email string) (User,
 	return scanUser(row)
 }
 
+// UpsertOAuthIdentity inserts or updates an external OAuth identity record.
+func (s *PostgresStore) UpsertOAuthIdentity(ctx context.Context, identity OAuthIdentity) (OAuthIdentity, error) {
+	row := s.pool.QueryRow(ctx, `
+		INSERT INTO user_oauth_identities (provider, provider_subject, user_id)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (provider, provider_subject) DO UPDATE SET
+			user_id = EXCLUDED.user_id
+		RETURNING provider, provider_subject, user_id, created_at
+	`, strings.TrimSpace(identity.Provider), strings.TrimSpace(identity.ProviderSubject), strings.TrimSpace(identity.UserID))
+	return scanOAuthIdentity(row)
+}
+
+// GetOAuthIdentity fetches an OAuth identity by provider and subject.
+func (s *PostgresStore) GetOAuthIdentity(ctx context.Context, provider string, subject string) (OAuthIdentity, error) {
+	row := s.pool.QueryRow(ctx, `
+		SELECT provider, provider_subject, user_id, created_at
+		FROM user_oauth_identities
+		WHERE provider = $1 AND provider_subject = $2
+	`, strings.TrimSpace(provider), strings.TrimSpace(subject))
+	return scanOAuthIdentity(row)
+}
+
 // CreateSession inserts or updates an opaque session record.
 func (s *PostgresStore) CreateSession(ctx context.Context, session Session) (Session, error) {
 	row := s.pool.QueryRow(ctx, `
@@ -134,6 +156,24 @@ func scanSession(row rowScanner) (Session, error) {
 		UserID:    userID.String,
 		ExpiresAt: expiresAt.Time,
 		CreatedAt: createdAt.Time,
+	}, nil
+}
+
+func scanOAuthIdentity(row rowScanner) (OAuthIdentity, error) {
+	var (
+		provider        sql.NullString
+		providerSubject sql.NullString
+		userID          sql.NullString
+		createdAt       sql.NullTime
+	)
+	if err := row.Scan(&provider, &providerSubject, &userID, &createdAt); err != nil {
+		return OAuthIdentity{}, fmt.Errorf("scan oauth identity: %w", err)
+	}
+	return OAuthIdentity{
+		Provider:        provider.String,
+		ProviderSubject: providerSubject.String,
+		UserID:          userID.String,
+		CreatedAt:       createdAt.Time,
 	}, nil
 }
 

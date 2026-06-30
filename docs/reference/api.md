@@ -2,7 +2,7 @@
 
 The public API is read-only JSON for source-linked electoral guide data. Admin draft endpoints are token-protected and local-only.
 
-Private-alpha session foundation is implemented via `GET /api/auth/session` and the HTTP-only `dsa_slate_session` cookie name, but login/logout flows are still out of scope.
+Private-alpha session foundation is implemented via `GET /api/auth/session` and the HTTP-only `dsa_slate_session` cookie name. Google OIDC sign-in now sits on top of that session model.
 
 ## Non-goals
 
@@ -59,6 +59,29 @@ See `docs/reference/civic-api.md` for the privacy and response contract.
 
 - Returns anonymous state when the `dsa_slate_session` cookie is absent, invalid, or expired.
 - Returns `{authenticated:true,user:{id,email,role}}` when a valid session exists.
+
+## Google OIDC sign-in
+
+`GET /api/auth/google/start`
+
+- Requires `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, and `APP_BASE_URL`/`GOOGLE_OAUTH_REDIRECT_URL`.
+- Sets temporary HTTP-only `dsa_google_oauth_state`, `dsa_google_oauth_nonce`, and `dsa_google_oauth_pkce` cookies.
+- Redirects to Google with `openid email profile` only.
+
+`GET /api/auth/google/callback`
+
+- Validates the `state` query against the temporary cookie.
+- Exchanges the authorization code with PKCE.
+- Verifies the ID token and nonce.
+- Creates/updates the local user, `user_oauth_identities`, and `dsa_slate_session`.
+- New Google identities may auto-link to existing local `user` accounts by verified email, but not to existing `editor` or `admin` accounts.
+- Clears the temporary OAuth cookies and redirects to `/`.
+
+`POST /api/auth/logout`
+
+- Deletes the current session when present.
+- Clears the `dsa_slate_session` cookie.
+- Returns `{authenticated:false}`.
 
 ## Admin draft endpoints
 

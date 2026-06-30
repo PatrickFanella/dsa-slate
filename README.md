@@ -21,8 +21,8 @@ First trusted-directory slice:
 
 Out of scope for the first launch: address lookup, admin UI, public submissions, live election-night results, campaign coordination, address storage, and automated nationwide scraping.
 
-Editorial/admin writes use a local bearer token from `ADMIN_API_TOKEN` instead of user accounts or OAuth.
-Open the draft console at `/admin`; the browser session must supply that bearer token in memory for any draft requests.
+Editorial/admin writes still use a local bearer token from `ADMIN_API_TOKEN`; the draft console remains at `/admin`.
+Google OIDC sign-in is available for local user sessions; open the home page and click “Sign in with Google”.
 
 ## Stack
 
@@ -74,6 +74,8 @@ Recommended feature order: stabilize the read API and seed data first, then buil
 - `make seed` loads the imported DSA chapter directory from `seeds/chapters.sql`, then applies California electoral records from `seeds/california.sql`; runtime code reads Postgres, not the original CSV import source.
 - Set `GOOGLE_CIVIC_API_KEY` in `.env` to enable anonymous `/api/civic/lookup`; `make dev-api` and Docker Compose pass it to the Go API without committing the key. The endpoint does not store raw addresses and does not confirm voter registration status.
 - The public homepage includes a Civic lookup panel with a supported-election dropdown for anonymous address-based election info; the submitted address stays in browser component state only.
+- For local Google sign-in, configure `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REDIRECT_URL`, and `APP_BASE_URL`. In Google Cloud Console, add this redirect URI: `http://localhost:5173/api/auth/google/callback`.
+- Google sign-in creates local `user` accounts. Existing `editor`/`admin` emails must have an explicit Google OAuth identity link before they can inherit privileged roles.
 
 ## Open Pilot
 

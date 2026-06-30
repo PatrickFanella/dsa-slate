@@ -541,6 +541,71 @@ func TestAuthSessionResolved(t *testing.T) {
 	}
 }
 
+func TestAuthGoogleStartNotConfigured(t *testing.T) {
+	handler := NewServerWithAuthAndServices(directory.NewMemoryStore(directory.DirectoryData{}), &testAuthStore{}, nil, nil, "", nil)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/auth/google/start", nil)
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusServiceUnavailable)
+	}
+	var got map[string]string
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if got["error"] != "auth_not_configured" {
+		t.Fatalf("error = %q, want auth_not_configured", got["error"])
+	}
+}
+
+func TestAuthGoogleStartDelegatesToService(t *testing.T) {
+	service := &testGoogleSignInService{startStatus: http.StatusFound, startLocation: "/api/auth/google/redirect"}
+	handler := NewServerWithAuthAndServices(directory.NewMemoryStore(directory.DirectoryData{}), &testAuthStore{}, service, nil, "", nil)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/auth/google/start", nil)
+
+	handler.ServeHTTP(rec, req)
+
+	if !service.startCalled {
+		t.Fatal("service start was not called")
+	}
+	if rec.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusFound)
+	}
+	if got := rec.Header().Get("Location"); got != "/api/auth/google/redirect" {
+		t.Fatalf("Location = %q, want redirect", got)
+	}
+}
+
+func TestAuthLogoutClearsCookieAndDeletesSession(t *testing.T) {
+	store := &testAuthStore{sessions: map[string]auth.Session{"session-1": {ID: "session-1", UserID: "user-1", ExpiresAt: time.Now().UTC().Add(time.Hour)}}}
+	handler := NewServerWithAuthAndServices(directory.NewMemoryStore(directory.DirectoryData{}), store, nil, nil, "", nil)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/logout", nil)
+	req.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: "session-1"})
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+	if _, ok := store.sessions["session-1"]; ok {
+		t.Fatal("session was not deleted")
+	}
+	if got := rec.Header().Values("Set-Cookie"); len(got) == 0 || !strings.Contains(strings.Join(got, "\n"), auth.SessionCookieName+"=") {
+		t.Fatalf("expected cleared session cookie, got %v", got)
+	}
+	var body auth.State
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if body.Authenticated {
+		t.Fatalf("authenticated = true, want false")
+	}
+}
+
 func TestAdminRoutesRequireToken(t *testing.T) {
 	handler := NewServerWithAdmin(directory.NewMemoryStore(directory.DirectoryData{}), &testAdminStore{}, "secret")
 	rec := httptest.NewRecorder()
@@ -643,9 +708,41 @@ type testAdminStore struct {
 	lastEndorsement   admin.EndorsementDraft
 }
 
+type testGoogleSignInService struct {
+	startCalled      bool
+	callbackCalled   bool
+	startStatus      int
+	startLocation    string
+	callbackStatus   int
+	callbackLocation string
+}
+
+func (s *testGoogleSignInService) Start(w http.ResponseWriter, r *http.Request) {
+	s.startCalled = true
+	if s.startStatus == 0 {
+		s.startStatus = http.StatusFound
+	}
+	if s.startLocation != "" {
+		w.Header().Set("Location", s.startLocation)
+	}
+	w.WriteHeader(s.startStatus)
+}
+
+func (s *testGoogleSignInService) Callback(w http.ResponseWriter, r *http.Request) {
+	s.callbackCalled = true
+	if s.callbackStatus == 0 {
+		s.callbackStatus = http.StatusFound
+	}
+	if s.callbackLocation != "" {
+		w.Header().Set("Location", s.callbackLocation)
+	}
+	w.WriteHeader(s.callbackStatus)
+}
+
 type testAuthStore struct {
-	users    map[string]auth.User
-	sessions map[string]auth.Session
+	users      map[string]auth.User
+	sessions   map[string]auth.Session
+	identities map[string]auth.OAuthIdentity
 }
 
 func (s *testAuthStore) UpsertUser(ctx context.Context, user auth.User) (auth.User, error) {
@@ -670,6 +767,25 @@ func (s *testAuthStore) GetUserByEmail(ctx context.Context, email string) (auth.
 		}
 	}
 	return auth.User{}, sql.ErrNoRows
+}
+
+func (s *testAuthStore) UpsertOAuthIdentity(ctx context.Context, identity auth.OAuthIdentity) (auth.OAuthIdentity, error) {
+	if s.identities == nil {
+		s.identities = make(map[string]auth.OAuthIdentity)
+	}
+	key := identity.Provider + "\x00" + identity.ProviderSubject
+	s.identities[key] = identity
+	return identity, nil
+}
+
+func (s *testAuthStore) GetOAuthIdentity(ctx context.Context, provider string, subject string) (auth.OAuthIdentity, error) {
+	if s.identities == nil {
+		return auth.OAuthIdentity{}, sql.ErrNoRows
+	}
+	if identity, ok := s.identities[provider+"\x00"+subject]; ok {
+		return identity, nil
+	}
+	return auth.OAuthIdentity{}, sql.ErrNoRows
 }
 
 func (s *testAuthStore) CreateSession(ctx context.Context, session auth.Session) (auth.Session, error) {

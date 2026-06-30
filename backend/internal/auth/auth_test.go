@@ -120,8 +120,9 @@ func TestResolveState(t *testing.T) {
 }
 
 type memoryAuthStore struct {
-	users    map[string]User
-	sessions map[string]Session
+	users      map[string]User
+	sessions   map[string]Session
+	identities map[string]OAuthIdentity
 }
 
 func (s *memoryAuthStore) UpsertUser(ctx context.Context, user User) (User, error) {
@@ -146,6 +147,25 @@ func (s *memoryAuthStore) GetUserByEmail(ctx context.Context, email string) (Use
 		}
 	}
 	return User{}, sql.ErrNoRows
+}
+
+func (s *memoryAuthStore) UpsertOAuthIdentity(ctx context.Context, identity OAuthIdentity) (OAuthIdentity, error) {
+	if s.identities == nil {
+		s.identities = make(map[string]OAuthIdentity)
+	}
+	key := identity.Provider + "\x00" + identity.ProviderSubject
+	s.identities[key] = identity
+	return identity, nil
+}
+
+func (s *memoryAuthStore) GetOAuthIdentity(ctx context.Context, provider string, subject string) (OAuthIdentity, error) {
+	if s.identities == nil {
+		return OAuthIdentity{}, sql.ErrNoRows
+	}
+	if identity, ok := s.identities[provider+"\x00"+subject]; ok {
+		return identity, nil
+	}
+	return OAuthIdentity{}, sql.ErrNoRows
 }
 
 func (s *memoryAuthStore) CreateSession(ctx context.Context, session Session) (Session, error) {

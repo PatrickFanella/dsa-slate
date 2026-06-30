@@ -68,6 +68,16 @@ CREATE TABLE IF NOT EXISTS user_sessions (
 CREATE INDEX IF NOT EXISTS user_sessions_user_id_idx ON user_sessions(user_id);
 CREATE INDEX IF NOT EXISTS user_sessions_expires_at_idx ON user_sessions(expires_at);
 
+CREATE TABLE IF NOT EXISTS user_oauth_identities (
+  provider text NOT NULL,
+  provider_subject text NOT NULL,
+  user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (provider, provider_subject)
+);
+
+CREATE INDEX IF NOT EXISTS user_oauth_identities_user_id_idx ON user_oauth_identities(user_id);
+
 CREATE TABLE IF NOT EXISTS voter_guides (
   id text PRIMARY KEY,
   title text NOT NULL,

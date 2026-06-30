@@ -3,6 +3,7 @@ package app
 import (
 	"net/url"
 	"os"
+	"strings"
 )
 
 const serviceName = "dsa-slate"
@@ -48,4 +49,24 @@ func envOrDefault(key string, fallback string) string {
 
 func GoogleCivicAPIKey() string {
 	return os.Getenv("GOOGLE_CIVIC_API_KEY")
+}
+
+// AppBaseURL returns the browser-facing local app URL used for OAuth redirects.
+func AppBaseURL() string {
+	return envOrDefault("APP_BASE_URL", "http://localhost:5173")
+}
+
+// GoogleOAuthClientID returns the configured Google OAuth client ID.
+func GoogleOAuthClientID() string {
+	return os.Getenv("GOOGLE_OAUTH_CLIENT_ID")
+}
+
+// GoogleOAuthClientSecret returns the configured Google OAuth client secret.
+func GoogleOAuthClientSecret() string {
+	return os.Getenv("GOOGLE_OAUTH_CLIENT_SECRET")
+}
+
+// GoogleOAuthRedirectURL returns the browser-facing callback URL for Google sign-in.
+func GoogleOAuthRedirectURL() string {
+	return envOrDefault("GOOGLE_OAUTH_REDIRECT_URL", strings.TrimRight(AppBaseURL(), "/")+"/api/auth/google/callback")
 }

@@ -45,10 +45,14 @@ func main() {
 	}
 	adminToken := appcfg.AdminAPIToken()
 	authStore := auth.NewPostgresStore(pool)
+	var googleAuth auth.GoogleSignInService
+	if clientID, clientSecret := appcfg.GoogleOAuthClientID(), appcfg.GoogleOAuthClientSecret(); clientID != "" && clientSecret != "" {
+		googleAuth = auth.NewGoogleSignInService(authStore, auth.NewGoogleOAuthConfig(clientID, clientSecret, appcfg.GoogleOAuthRedirectURL(), appcfg.AppBaseURL()), nil)
+	}
 	if adminToken != "" {
-		handler = httpapi.NewServerWithAuthAndServices(directory.NewPostgresStore(pool), authStore, admin.NewPostgresStore(pool), adminToken, civicService)
+		handler = httpapi.NewServerWithAuthAndServices(directory.NewPostgresStore(pool), authStore, googleAuth, admin.NewPostgresStore(pool), adminToken, civicService)
 	} else {
-		handler = httpapi.NewServerWithAuthAndServices(directory.NewPostgresStore(pool), authStore, nil, "", civicService)
+		handler = httpapi.NewServerWithAuthAndServices(directory.NewPostgresStore(pool), authStore, googleAuth, nil, "", civicService)
 	}
 	log.Fatal(http.ListenAndServe(":"+port, handler))
 }

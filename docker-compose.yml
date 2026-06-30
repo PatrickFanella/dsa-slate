@@ -24,6 +24,10 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-dsa_slate}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
       GOOGLE_CIVIC_API_KEY: ${GOOGLE_CIVIC_API_KEY:-}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:5173}
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
+      GOOGLE_OAUTH_REDIRECT_URL: ${GOOGLE_OAUTH_REDIRECT_URL:-http://localhost:5173/api/auth/google/callback}
       ADMIN_API_TOKEN: ${ADMIN_API_TOKEN:-}
     depends_on:
       postgres:

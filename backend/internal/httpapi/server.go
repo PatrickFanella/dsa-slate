@@ -19,6 +19,7 @@ import (
 type Server struct {
 	store        directory.Store
 	authStore    auth.Store
+	googleAuth   auth.GoogleSignInService
 	adminStore   admin.Store
 	adminToken   string
 	civicService civic.LookupService
@@ -31,24 +32,25 @@ func NewServer(store directory.Store) http.Handler {
 
 // NewServerWithAuth creates a server with auth session resolution enabled.
 func NewServerWithAuth(store directory.Store, authStore auth.Store) http.Handler {
-	return NewServerWithAuthAndServices(store, authStore, nil, "", nil)
+	return NewServerWithAuthAndServices(store, authStore, nil, nil, "", nil)
 }
 
 // NewServerWithAdmin creates a server with admin routes enabled.
 func NewServerWithAdmin(store directory.Store, adminStore admin.Store, adminToken string) http.Handler {
-	return NewServerWithAuthAndServices(store, nil, adminStore, adminToken, nil)
+	return NewServerWithAuthAndServices(store, nil, nil, adminStore, adminToken, nil)
 }
 
 // NewServerWithServices creates a server with admin and civic dependencies.
 func NewServerWithServices(store directory.Store, adminStore admin.Store, adminToken string, civicService civic.LookupService) http.Handler {
-	return NewServerWithAuthAndServices(store, nil, adminStore, adminToken, civicService)
+	return NewServerWithAuthAndServices(store, nil, nil, adminStore, adminToken, civicService)
 }
 
 // NewServerWithAuthAndServices creates a server with auth, admin, and civic dependencies.
-func NewServerWithAuthAndServices(store directory.Store, authStore auth.Store, adminStore admin.Store, adminToken string, civicService civic.LookupService) http.Handler {
+func NewServerWithAuthAndServices(store directory.Store, authStore auth.Store, googleAuth auth.GoogleSignInService, adminStore admin.Store, adminToken string, civicService civic.LookupService) http.Handler {
 	return &Server{
 		store:        store,
 		authStore:    authStore,
+		googleAuth:   googleAuth,
 		adminStore:   adminStore,
 		adminToken:   strings.TrimSpace(adminToken),
 		civicService: civicService,
@@ -129,6 +131,24 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		s.authSession(w, r)
+	case "/api/auth/google/start":
+		if r.Method != http.MethodGet {
+			s.methodNotAllowedAllow(w, http.MethodGet)
+			return
+		}
+		s.authGoogleStart(w, r)
+	case "/api/auth/google/callback":
+		if r.Method != http.MethodGet {
+			s.methodNotAllowedAllow(w, http.MethodGet)
+			return
+		}
+		s.authGoogleCallback(w, r)
+	case "/api/auth/logout":
+		if r.Method != http.MethodPost {
+			s.methodNotAllowedAllow(w, http.MethodPost)
+			return
+		}
+		s.authLogout(w, r)
 	case "/api/civic/elections":
 		if r.Method != http.MethodGet {
 			s.methodNotAllowedAllow(w, http.MethodGet)
@@ -339,6 +359,46 @@ func (s *Server) authSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.writeJSON(w, http.StatusOK, state)
+}
+
+func (s *Server) authGoogleStart(w http.ResponseWriter, r *http.Request) {
+	if s.googleAuth == nil {
+		s.writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "auth_not_configured"})
+		return
+	}
+	s.googleAuth.Start(w, r)
+}
+
+func (s *Server) authGoogleCallback(w http.ResponseWriter, r *http.Request) {
+	if s.googleAuth == nil {
+		s.writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "auth_not_configured"})
+		return
+	}
+	s.googleAuth.Callback(w, r)
+}
+
+func (s *Server) authLogout(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     auth.SessionCookieName,
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   -1,
+		Expires:  time.Unix(0, 0).UTC(),
+		Secure:   strings.HasPrefix(app.AppBaseURL(), "https://"),
+	})
+
+	if s.authStore != nil {
+		if cookie, err := r.Cookie(auth.SessionCookieName); err == nil && strings.TrimSpace(cookie.Value) != "" {
+			if err := s.authStore.DeleteSession(r.Context(), cookie.Value); err != nil {
+				s.internalServerError(w)
+				return
+			}
+		}
+	}
+
+	s.writeJSON(w, http.StatusOK, auth.State{})
 }
 
 func (s *Server) decodeCivicLookup(w http.ResponseWriter, r *http.Request) (civic.LookupRequest, bool) {

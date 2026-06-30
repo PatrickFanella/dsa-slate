@@ -53,11 +53,8 @@ Private-alpha slice 1 implemented:
 - `users` and `user_sessions` schema in `migrations/0001_init.sql`
 - `backend/internal/auth` package with role/session DTOs, session token generation, and Postgres helpers
 - `GET /api/auth/session` anonymous/current-session read path
-
-Recommended first implementation:
-
-- email/password or magic-link, not both
-- Google sign-in after session model stabilizes
+- Google OIDC sign-in slice with `user_oauth_identities`, state/nonce/PKCE, verified ID tokens, local sessions, and logout
+- existing `editor`/`admin` accounts require explicit OAuth identity links before Google sign-in can use those privileged roles
 
 ### User/profile module
 
@@ -196,19 +193,10 @@ No raw address table is part of private-alpha foundation.
 
 ### Auth endpoints
 
-First auth method endpoints depend on selected method.
-
-Email/password version:
-
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `POST /api/auth/logout`
-- `GET /api/auth/session`
-
-Google sign-in later:
-
 - `GET /api/auth/google/start`
 - `GET /api/auth/google/callback`
+- `POST /api/auth/logout`
+- `GET /api/auth/session`
 
 ### User endpoints
 

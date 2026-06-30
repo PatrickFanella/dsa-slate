@@ -4,6 +4,7 @@ import { DetailPanel } from './components/DetailPanel';
 import { EndorsementCard, MeasureCard, VoterGuideCard } from './components/DirectoryCard';
 import { MethodologyPanel } from './components/MethodologyPanel';
 import { allDirectoryCards, buildDirectoryCards, type DirectoryCardKey } from './data';
+import { fetchAuthSession, logout as logoutAuth, type AuthState } from './data/authApi';
 import { filterDirectoryCards } from './data/filter';
 import type { BrowseFilters } from './data/api';
 import { useDirectoryData, type DirectoryLoadStatus } from './data/useDirectoryData';
@@ -139,6 +140,7 @@ function PublicHomePage() {
               Methodology & disclaimer
             </a>
           </div>
+          <AuthShell />
           <div className="mt-8 grid gap-3 rounded-none border-2 border-border bg-surface-muted p-4 md:grid-cols-[1fr_auto]">
             <label className="sr-only" htmlFor="slate-search">
               Text search candidates, chapters, offices, elections, or voter guides
@@ -346,6 +348,68 @@ function StatCard({ label, value }: { label: string; value: string }) {
       <p className="text-sm font-black uppercase tracking-wide text-primary">{label}</p>
       <p className="mt-2 text-4xl font-black text-foreground">{value}</p>
     </article>
+  );
+}
+
+function AuthShell() {
+  const [authState, setAuthState] = useState<AuthState>({ authenticated: false });
+
+  useEffect(() => {
+    let active = true;
+
+    fetchAuthSession()
+      .then((state) => {
+        if (active) {
+          setAuthState(state);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setAuthState({ authenticated: false });
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (!authState.authenticated || !authState.user) {
+    return (
+      <div className="mt-4 flex flex-wrap items-center gap-3 rounded-none border-2 border-border bg-surface-muted px-4 py-3 text-sm text-muted">
+        <a
+          className="font-black text-primary underline-offset-4 transition hover:underline"
+          href="/api/auth/google/start"
+        >
+          Sign in with Google
+        </a>
+        <span>Google verifies identity; DSA Slate keeps local roles and sessions.</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-none border-2 border-border bg-surface-muted px-4 py-3 text-sm text-muted">
+      <p>
+        Signed in as <span className="font-black text-foreground">{authState.user.email}</span>
+        {' '}
+        <span className="uppercase tracking-wide">({authState.user.role})</span>
+      </p>
+      <button
+        className="rounded-none border-2 border-border-strong bg-surface px-4 py-2 font-black text-foreground transition hover:bg-surface-accent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        type="button"
+        onClick={async () => {
+          try {
+            const state = await logoutAuth();
+            setAuthState(state);
+          } catch {
+            setAuthState({ authenticated: false });
+          }
+        }}
+      >
+        Sign out
+      </button>
+    </div>
   );
 }
 
