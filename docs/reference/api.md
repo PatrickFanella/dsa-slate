@@ -2,6 +2,8 @@
 
 The public API is read-only JSON for source-linked electoral guide data. Admin draft endpoints are token-protected and local-only.
 
+Private-alpha session foundation is implemented via `GET /api/auth/session` and the HTTP-only `dsa_slate_session` cookie name, but login/logout flows are still out of scope.
+
 ## Non-goals
 
 - No public write endpoints.
@@ -50,6 +52,13 @@ All empty collections are JSON arrays, not `null`.
 `POST /api/civic/lookup` is available when `GOOGLE_CIVIC_API_KEY` is configured. It returns polling-place and registration links from Google Civic Information API without storing raw addresses and without confirming voter registration status.
 
 See `docs/reference/civic-api.md` for the privacy and response contract.
+
+## Auth session foundation
+
+`GET /api/auth/session`
+
+- Returns anonymous state when the `dsa_slate_session` cookie is absent, invalid, or expired.
+- Returns `{authenticated:true,user:{id,email,role}}` when a valid session exists.
 
 ## Admin draft endpoints
 

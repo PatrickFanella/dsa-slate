@@ -8,8 +8,10 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"git.subcult.tv/subculture-collective/dsa-slate/internal/admin"
+	"git.subcult.tv/subculture-collective/dsa-slate/internal/auth"
 	"git.subcult.tv/subculture-collective/dsa-slate/internal/civic"
 	"git.subcult.tv/subculture-collective/dsa-slate/internal/directory"
 )
@@ -485,6 +487,60 @@ func TestCivicLookupSurfacesUpstreamMessage(t *testing.T) {
 	}
 }
 
+func TestAuthSessionAnonymous(t *testing.T) {
+	handler := NewServerWithAuth(directory.NewMemoryStore(directory.DirectoryData{}), &testAuthStore{})
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/auth/session", nil)
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+	var got auth.State
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if got.Authenticated {
+		t.Fatalf("authenticated = true, want false")
+	}
+}
+
+func TestAuthSessionResolved(t *testing.T) {
+	now := time.Now().UTC()
+	store := &testAuthStore{
+		sessions: map[string]auth.Session{
+			"session-1": {ID: "session-1", UserID: "user-1", ExpiresAt: now.Add(time.Hour)},
+		},
+		users: map[string]auth.User{
+			"user-1": {ID: "user-1", Email: "editor@example.org", Role: auth.RoleEditor},
+		},
+	}
+	handler := NewServerWithAuth(directory.NewMemoryStore(directory.DirectoryData{}), store)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/auth/session", nil)
+	req.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: "session-1"})
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+	var got auth.State
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if !got.Authenticated || got.User == nil {
+		t.Fatalf("state = %#v, want authenticated user", got)
+	}
+	if got.User.ID != "user-1" || got.User.Email != "editor@example.org" || got.User.Role != auth.RoleEditor {
+		t.Fatalf("user = %#v, want user-1/editor@example.org/editor", got.User)
+	}
+	if store.sessions["session-1"].ExpiresAt.Before(now) {
+		t.Fatal("test setup invalid")
+	}
+}
+
 func TestAdminRoutesRequireToken(t *testing.T) {
 	handler := NewServerWithAdmin(directory.NewMemoryStore(directory.DirectoryData{}), &testAdminStore{}, "secret")
 	rec := httptest.NewRecorder()
@@ -585,6 +641,55 @@ type testAdminStore struct {
 	lastActor         string
 	lastChapterDraft  admin.ChapterDraft
 	lastEndorsement   admin.EndorsementDraft
+}
+
+type testAuthStore struct {
+	users    map[string]auth.User
+	sessions map[string]auth.Session
+}
+
+func (s *testAuthStore) UpsertUser(ctx context.Context, user auth.User) (auth.User, error) {
+	if s.users == nil {
+		s.users = make(map[string]auth.User)
+	}
+	s.users[user.ID] = user
+	return user, nil
+}
+
+func (s *testAuthStore) GetUser(ctx context.Context, id string) (auth.User, error) {
+	if user, ok := s.users[id]; ok {
+		return user, nil
+	}
+	return auth.User{}, sql.ErrNoRows
+}
+
+func (s *testAuthStore) GetUserByEmail(ctx context.Context, email string) (auth.User, error) {
+	for _, user := range s.users {
+		if user.Email == email {
+			return user, nil
+		}
+	}
+	return auth.User{}, sql.ErrNoRows
+}
+
+func (s *testAuthStore) CreateSession(ctx context.Context, session auth.Session) (auth.Session, error) {
+	if s.sessions == nil {
+		s.sessions = make(map[string]auth.Session)
+	}
+	s.sessions[session.ID] = session
+	return session, nil
+}
+
+func (s *testAuthStore) GetSession(ctx context.Context, token string) (auth.Session, error) {
+	if session, ok := s.sessions[token]; ok {
+		return session, nil
+	}
+	return auth.Session{}, sql.ErrNoRows
+}
+
+func (s *testAuthStore) DeleteSession(ctx context.Context, token string) error {
+	delete(s.sessions, token)
+	return nil
 }
 
 func (s *testAdminStore) ListChapterDrafts(ctx context.Context) ([]admin.ChapterDraft, error) {

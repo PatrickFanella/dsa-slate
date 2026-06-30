@@ -7,31 +7,48 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"git.subcult.tv/subculture-collective/dsa-slate/internal/admin"
 	"git.subcult.tv/subculture-collective/dsa-slate/internal/app"
+	"git.subcult.tv/subculture-collective/dsa-slate/internal/auth"
 	"git.subcult.tv/subculture-collective/dsa-slate/internal/civic"
 	"git.subcult.tv/subculture-collective/dsa-slate/internal/directory"
 )
 
 type Server struct {
 	store        directory.Store
+	authStore    auth.Store
 	adminStore   admin.Store
 	adminToken   string
 	civicService civic.LookupService
 }
 
+// NewServer creates a public-read server without auth or admin dependencies.
 func NewServer(store directory.Store) http.Handler {
 	return &Server{store: store}
 }
 
-func NewServerWithAdmin(store directory.Store, adminStore admin.Store, adminToken string) http.Handler {
-	return NewServerWithServices(store, adminStore, adminToken, nil)
+// NewServerWithAuth creates a server with auth session resolution enabled.
+func NewServerWithAuth(store directory.Store, authStore auth.Store) http.Handler {
+	return NewServerWithAuthAndServices(store, authStore, nil, "", nil)
 }
 
+// NewServerWithAdmin creates a server with admin routes enabled.
+func NewServerWithAdmin(store directory.Store, adminStore admin.Store, adminToken string) http.Handler {
+	return NewServerWithAuthAndServices(store, nil, adminStore, adminToken, nil)
+}
+
+// NewServerWithServices creates a server with admin and civic dependencies.
 func NewServerWithServices(store directory.Store, adminStore admin.Store, adminToken string, civicService civic.LookupService) http.Handler {
+	return NewServerWithAuthAndServices(store, nil, adminStore, adminToken, civicService)
+}
+
+// NewServerWithAuthAndServices creates a server with auth, admin, and civic dependencies.
+func NewServerWithAuthAndServices(store directory.Store, authStore auth.Store, adminStore admin.Store, adminToken string, civicService civic.LookupService) http.Handler {
 	return &Server{
 		store:        store,
+		authStore:    authStore,
 		adminStore:   adminStore,
 		adminToken:   strings.TrimSpace(adminToken),
 		civicService: civicService,
@@ -106,6 +123,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		s.civicLookup(w, r)
+	case "/api/auth/session":
+		if r.Method != http.MethodGet {
+			s.methodNotAllowedAllow(w, http.MethodGet)
+			return
+		}
+		s.authSession(w, r)
 	case "/api/civic/elections":
 		if r.Method != http.MethodGet {
 			s.methodNotAllowedAllow(w, http.MethodGet)
@@ -295,6 +318,27 @@ func (s *Server) civicElections(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.writeJSON(w, http.StatusOK, response)
+}
+
+func (s *Server) authSession(w http.ResponseWriter, r *http.Request) {
+	if s.authStore == nil {
+		s.writeJSON(w, http.StatusOK, auth.State{})
+		return
+	}
+
+	cookie, err := r.Cookie(auth.SessionCookieName)
+	if err != nil {
+		s.writeJSON(w, http.StatusOK, auth.State{})
+		return
+	}
+
+	state, err := auth.ResolveState(r.Context(), s.authStore, cookie.Value, timeNow())
+	if err != nil {
+		s.internalServerError(w)
+		return
+	}
+
+	s.writeJSON(w, http.StatusOK, state)
 }
 
 func (s *Server) decodeCivicLookup(w http.ResponseWriter, r *http.Request) (civic.LookupRequest, bool) {
@@ -684,4 +728,8 @@ func (s *Server) writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(payload)
+}
+
+func timeNow() time.Time {
+	return time.Now().UTC()
 }

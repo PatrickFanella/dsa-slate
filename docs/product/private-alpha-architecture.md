@@ -48,6 +48,12 @@ Responsibilities:
 - role checks
 - CSRF token support for cookie-authenticated writes
 
+Private-alpha slice 1 implemented:
+
+- `users` and `user_sessions` schema in `migrations/0001_init.sql`
+- `backend/internal/auth` package with role/session DTOs, session token generation, and Postgres helpers
+- `GET /api/auth/session` anonymous/current-session read path
+
 Recommended first implementation:
 
 - email/password or magic-link, not both

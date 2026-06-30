@@ -8,6 +8,7 @@ import (
 
 	"git.subcult.tv/subculture-collective/dsa-slate/internal/admin"
 	appcfg "git.subcult.tv/subculture-collective/dsa-slate/internal/app"
+	"git.subcult.tv/subculture-collective/dsa-slate/internal/auth"
 	"git.subcult.tv/subculture-collective/dsa-slate/internal/civic"
 	"git.subcult.tv/subculture-collective/dsa-slate/internal/directory"
 	"git.subcult.tv/subculture-collective/dsa-slate/internal/httpapi"
@@ -43,10 +44,11 @@ func main() {
 		civicService = civic.NewGoogleClient(civicAPIKey, http.DefaultClient)
 	}
 	adminToken := appcfg.AdminAPIToken()
+	authStore := auth.NewPostgresStore(pool)
 	if adminToken != "" {
-		handler = httpapi.NewServerWithServices(directory.NewPostgresStore(pool), admin.NewPostgresStore(pool), adminToken, civicService)
+		handler = httpapi.NewServerWithAuthAndServices(directory.NewPostgresStore(pool), authStore, admin.NewPostgresStore(pool), adminToken, civicService)
 	} else {
-		handler = httpapi.NewServerWithServices(directory.NewPostgresStore(pool), nil, "", civicService)
+		handler = httpapi.NewServerWithAuthAndServices(directory.NewPostgresStore(pool), authStore, nil, "", civicService)
 	}
 	log.Fatal(http.ListenAndServe(":"+port, handler))
 }

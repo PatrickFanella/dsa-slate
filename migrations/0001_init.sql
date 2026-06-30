@@ -48,6 +48,26 @@ CREATE TABLE IF NOT EXISTS candidates (
   photo_url text
 );
 
+CREATE TABLE IF NOT EXISTS users (
+  id text PRIMARY KEY,
+  email text NOT NULL UNIQUE,
+  display_name text,
+  role text NOT NULL DEFAULT 'user',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT users_role_check CHECK (role IN ('user', 'editor', 'admin'))
+);
+
+CREATE TABLE IF NOT EXISTS user_sessions (
+  id text PRIMARY KEY,
+  user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at timestamptz NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS user_sessions_user_id_idx ON user_sessions(user_id);
+CREATE INDEX IF NOT EXISTS user_sessions_expires_at_idx ON user_sessions(expires_at);
+
 CREATE TABLE IF NOT EXISTS voter_guides (
   id text PRIMARY KEY,
   title text NOT NULL,
