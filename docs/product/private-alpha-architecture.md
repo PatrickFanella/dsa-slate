@@ -255,6 +255,7 @@ Router dependency is optional; current pathname switch can work for one more sli
 - grouped print-friendly slate view later
 
 Current slice covers endorsement, measure-position, and voter-guide saved items.
+Current polish adds primary navigation across Directory, My Slate, and Admin plus sign-in/sign-out recovery actions in saved-slate and admin flows.
 
 ### Admin UI
 
@@ -349,10 +350,11 @@ Before storing raw addresses, create a separate threat model covering:
 
 ### Slice 6: Private alpha polish
 
-- navigation
-- copy review
-- runbook
-- launch checklist
+- navigation across Directory, My Slate, and Admin
+- actionable sign-in/sign-out recovery in saved-slate and admin flows
+- copy review for privacy and official-source disclaimers
+- runbook at `docs/runbooks/private-alpha-launch.md`
+- launch checklist and tester pass/fail criteria
 
 ### Slice 7: Address privacy design
 

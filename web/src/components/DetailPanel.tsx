@@ -58,22 +58,25 @@ function DetailSaveButton({ authenticated, onToggleSaved, saved, saving }: SaveA
     return null;
   }
 
+  if (!authenticated) {
+    return (
+      <a
+        className="mt-5 block w-full rounded-none border-2 border-primary bg-primary px-4 py-3 text-center font-black text-primary-foreground transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        href="/api/auth/google/start"
+      >
+        Sign in to save this record
+      </a>
+    );
+  }
+
   return (
     <button
       className="mt-5 w-full rounded-none border-2 border-border-strong bg-primary px-4 py-3 font-black text-primary-foreground transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-      disabled={!authenticated || saving}
+      disabled={saving}
       type="button"
       onClick={onToggleSaved}
     >
-      {saving
-        ? saved
-          ? 'Removing…'
-          : 'Saving…'
-        : saved
-          ? 'Remove from my slate'
-          : authenticated
-            ? 'Save to my slate'
-            : 'Sign in to save this record'}
+      {saving ? (saved ? 'Removing…' : 'Saving…') : saved ? 'Remove from my slate' : 'Save to my slate'}
     </button>
   );
 }

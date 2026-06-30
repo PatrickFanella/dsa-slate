@@ -12,4 +12,8 @@ This directory is the current project knowledge base.
 - `open-pilot.md` — how to prepare issues for Open Pilot
 - `product.md` — DSA Slate product requirements and MVP scope
 
+## Launch readiness
+
+- `runbooks/private-alpha-launch.md` — private-alpha checklist, tester flow, pass/fail criteria, and cleanup steps.
+
 Keep docs current, concise, and linked from this hub.

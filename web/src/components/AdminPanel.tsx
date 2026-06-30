@@ -30,7 +30,7 @@ import {
   type AdminEndorsementDraft,
   type AdminEndorsementDraftForm,
 } from '../data/adminApi';
-import { fetchAuthSession, type AuthState } from '../data/authApi';
+import { fetchAuthSession, logout as logoutAuth, type AuthState } from '../data/authApi';
 import { confidenceLabel, confidenceLevels, endorsementTypeLabel, endorsementTypes } from '../data/schema';
 
 type Notice = {
@@ -296,6 +296,16 @@ export function AdminPanel() {
     }
   }
 
+  async function signOut() {
+    try {
+      const state = await logoutAuth();
+      setAuthState(state);
+    } catch {
+      setAuthState({ authenticated: false });
+    }
+    setNotice({ kind: 'info', title: 'Signed out', messages: ['Sign in with an editor or admin account to resume drafting.'] });
+  }
+
   function resetChapterDraftFromResponse(draft: AdminChapterDraft) {
     setChapterDraft(adminChapterDraftToForm(draft));
   }
@@ -307,6 +317,17 @@ export function AdminPanel() {
   return (
     <main className="min-h-screen bg-background px-6 py-10 text-foreground">
       <section className="mx-auto flex max-w-6xl flex-col gap-8">
+        <nav aria-label="Primary" className="flex flex-wrap items-center gap-3 rounded-none border-2 border-border bg-surface-muted p-3">
+          <a className="rounded-none border-2 border-border-strong bg-surface px-4 py-2 text-sm font-black text-foreground transition hover:bg-surface-accent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background" href="/">
+            Directory
+          </a>
+          <a className="rounded-none border-2 border-border-strong bg-surface px-4 py-2 text-sm font-black text-foreground transition hover:bg-surface-accent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background" href="/me/slate">
+            My Slate
+          </a>
+          <a aria-current="page" className="rounded-none border-2 border-primary bg-primary px-4 py-2 text-sm font-black text-primary-foreground transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background" href="/admin">
+            Admin
+          </a>
+        </nav>
         <header className="rounded-none border-2 border-border-strong bg-surface p-8 shadow-[10px_10px_0_var(--theme-shadow)] md:p-12">
           <p className="text-sm font-black uppercase tracking-[0.28em] text-primary">DSA Slate Admin</p>
           <h1 className="mt-4 font-display text-4xl font-black tracking-tight text-foreground md:text-6xl">Editorial draft console</h1>
@@ -320,9 +341,18 @@ export function AdminPanel() {
             {authLoading ? (
               <p className="mt-2 text-sm leading-6 text-muted">Checking signed-in editor session…</p>
             ) : signedInUser ? (
-              <p className="mt-2 text-sm leading-6 text-foreground">
-                {signedInUser.email} · <span className="font-black uppercase tracking-[0.18em] text-primary">{signedInUser.role}</span>
-              </p>
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm leading-6 text-foreground">
+                  {signedInUser.email} · <span className="font-black uppercase tracking-[0.18em] text-primary">{signedInUser.role}</span>
+                </p>
+                <button
+                  className="rounded-none border-2 border-border-strong bg-surface px-4 py-2 text-sm font-black text-foreground transition hover:bg-surface-accent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  type="button"
+                  onClick={signOut}
+                >
+                  Sign out / switch account
+                </button>
+              </div>
             ) : (
               <p className="mt-2 text-sm leading-6 text-muted">Not signed in. Use Google sign-in before opening the admin console.</p>
             )}
@@ -342,12 +372,37 @@ export function AdminPanel() {
                 : 'Sign in with an editor or admin account to use the private alpha admin workflow.'}
             </p>
             {!signedInUser ? (
-              <a
-                className="mt-5 inline-flex rounded-none border-2 border-primary bg-primary px-5 py-3 font-black text-primary-foreground transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                href="/api/auth/google/start"
-              >
-                Sign in with Google
-              </a>
+              <div className="mt-5 flex flex-wrap gap-3">
+                <a
+                  className="inline-flex rounded-none border-2 border-primary bg-primary px-5 py-3 font-black text-primary-foreground transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  href="/api/auth/google/start"
+                >
+                  Sign in with Google
+                </a>
+                <a
+                  className="inline-flex rounded-none border-2 border-border-strong bg-surface px-5 py-3 font-black text-foreground transition hover:bg-surface-accent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  href="/"
+                >
+                  Back to directory
+                </a>
+              </div>
+            ) : null}
+            {signedInUser ? (
+              <div className="mt-5 flex flex-wrap gap-3">
+                <a
+                  className="inline-flex rounded-none border-2 border-border-strong bg-surface px-5 py-3 font-black text-foreground transition hover:bg-surface-accent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  href="/"
+                >
+                  Back to directory
+                </a>
+                <button
+                  className="inline-flex rounded-none border-2 border-border-strong bg-surface px-5 py-3 font-black text-foreground transition hover:bg-surface-accent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  type="button"
+                  onClick={signOut}
+                >
+                  Sign out / switch account
+                </button>
+              </div>
             ) : null}
           </section>
         ) : null}

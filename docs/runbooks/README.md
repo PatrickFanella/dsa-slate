@@ -12,3 +12,7 @@ Good runbooks include:
 - Verification
 
 Add DSA Slate operating runbooks as repeatable workflows emerge.
+
+## Available runbooks
+
+- `private-alpha-launch.md` — checklist and tester flow for deciding whether a private-alpha build is ready for invited testers.

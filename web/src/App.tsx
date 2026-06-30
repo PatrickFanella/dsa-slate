@@ -199,6 +199,7 @@ function PublicHomePage() {
   return (
     <main className="min-h-screen bg-background px-6 py-10 text-foreground">
       <section className="mx-auto flex max-w-6xl flex-col gap-10">
+        <AppNav current="directory" />
         <header className="rounded-none border-2 border-border-strong bg-surface p-8 shadow-[10px_10px_0_var(--theme-shadow)] md:p-12">
           <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-4xl">
@@ -494,9 +495,22 @@ function SavedSlatePage() {
     }
   };
 
+  const signOut = async () => {
+    try {
+      const state = await logoutAuth();
+      setAuthState(state);
+    } catch {
+      setAuthState({ authenticated: false });
+    } finally {
+      setSavedItems([]);
+      setMessage('Signed out. Sign in to view and save your slate.');
+    }
+  };
+
   return (
     <main className="min-h-screen bg-background px-6 py-10 text-foreground">
       <section className="mx-auto flex max-w-5xl flex-col gap-8">
+        <AppNav current="slate" />
         <header className="rounded-none border-2 border-border-strong bg-surface p-8 shadow-[10px_10px_0_var(--theme-shadow)]">
           <p className="text-sm font-black uppercase tracking-[0.28em] text-primary">My Slate</p>
           <h1 className="mt-4 font-display text-4xl font-black tracking-tight text-foreground">Saved records</h1>
@@ -512,7 +526,21 @@ function SavedSlatePage() {
                 Sign in with Google
               </a>
             ) : null}
+            {authState.authenticated ? (
+              <button
+                className="rounded-none border-2 border-border-strong bg-surface px-5 py-3 font-black text-foreground transition hover:bg-surface-accent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                type="button"
+                onClick={signOut}
+              >
+                Sign out / switch account
+              </button>
+            ) : null}
           </div>
+          {authState.authenticated && authState.user ? (
+            <p className="mt-4 text-sm leading-6 text-muted">
+              Signed in as <span className="font-black text-foreground">{authState.user.email}</span>.
+            </p>
+          ) : null}
           <p className="mt-4 rounded-none border-2 border-border bg-surface-muted px-4 py-3 text-sm leading-6 text-muted" aria-live="polite">
             {message}
           </p>
@@ -520,7 +548,7 @@ function SavedSlatePage() {
         </header>
 
         {authState.authenticated && savedCards.length === 0 ? (
-          <EmptyStateCard message="No saved records yet. Return to the directory and save endorsements, voter guides, or ballot-measure positions to build your slate." />
+          <EmptyStateCard message="No saved records yet. Return to the directory and save endorsements, voter guides, or ballot-measure positions to build your slate. Only public record references are stored." />
         ) : null}
 
         {authState.authenticated && savedCards.length > 0 ? (
@@ -538,6 +566,30 @@ function SavedSlatePage() {
         ) : null}
       </section>
     </main>
+  );
+}
+
+function AppNav({ current }: { current: 'directory' | 'slate' | 'admin' }) {
+  const linkClassName = (active: boolean) =>
+    [
+      'rounded-none border-2 px-4 py-2 text-sm font-black transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+      active
+        ? 'border-primary bg-primary text-primary-foreground'
+        : 'border-border-strong bg-surface text-foreground hover:bg-surface-accent',
+    ].join(' ');
+
+  return (
+    <nav aria-label="Primary" className="flex flex-wrap items-center gap-3 rounded-none border-2 border-border bg-surface-muted p-3">
+      <a aria-current={current === 'directory' ? 'page' : undefined} className={linkClassName(current === 'directory')} href="/">
+        Directory
+      </a>
+      <a aria-current={current === 'slate' ? 'page' : undefined} className={linkClassName(current === 'slate')} href="/me/slate">
+        My Slate
+      </a>
+      <a aria-current={current === 'admin' ? 'page' : undefined} className={linkClassName(current === 'admin')} href="/admin">
+        Admin
+      </a>
+    </nav>
   );
 }
 

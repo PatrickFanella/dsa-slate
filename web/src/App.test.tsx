@@ -70,6 +70,7 @@ describe('App', () => {
     expect(html).toContain('Sign in with Google');
     expect(html).toContain('My Slate');
     expect(html).toContain('Sign in to save');
+    expect(html).toContain('/api/auth/google/start');
     expect(html).toContain('saves public record references only');
     expect(html).toContain('Voter guides');
     expect(html).toContain('Search this source-linked directory');
@@ -96,7 +97,7 @@ describe('App', () => {
     expect(html).toContain('The public label stays as the original source used it.');
     expect(html).toContain('DSA Slate links to official election information and does not replace official voter or election sources.');
     expect(html).toContain('aria-live="polite"');
-    expect(html).toContain('disabled');
+    expect(html).not.toContain('disabled=""');
     expect(html).toContain('Corinna Contreras');
     expect(html).toContain('Recommended');
     expect(html).toContain('Official source');
@@ -127,6 +128,8 @@ describe('App', () => {
       expect(html).toContain('Checking signed-in session.');
       expect(html).toContain('Back to directory');
       expect(html).toContain('Sign in with Google');
+      expect(html).toContain('Directory');
+      expect(html).toContain('Admin');
       expect(html).not.toContain('DSA Slate Admin');
     } finally {
       restore();

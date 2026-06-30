@@ -40,14 +40,25 @@ function SaveButton({ authenticated, saved, saving, onToggleSaved }: SaveActionP
     return null;
   }
 
+  if (!authenticated) {
+    return (
+      <a
+        className="mt-4 block w-full rounded-none border-2 border-border-strong bg-surface-muted px-4 py-2 text-center text-sm font-black text-foreground transition hover:bg-surface-accent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        href="/api/auth/google/start"
+      >
+        Sign in to save
+      </a>
+    );
+  }
+
   return (
     <button
       className="mt-4 w-full rounded-none border-2 border-border-strong bg-surface-muted px-4 py-2 text-sm font-black text-foreground transition hover:bg-surface-accent disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-      disabled={!authenticated || saving}
+      disabled={saving}
       type="button"
       onClick={onToggleSaved}
     >
-      {saving ? (saved ? 'Removing…' : 'Saving…') : saved ? 'Remove from my slate' : authenticated ? 'Save to my slate' : 'Sign in to save'}
+      {saving ? (saved ? 'Removing…' : 'Saving…') : saved ? 'Remove from my slate' : 'Save to my slate'}
     </button>
   );
 }

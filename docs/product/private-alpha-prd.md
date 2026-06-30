@@ -27,6 +27,7 @@ Already built:
 - Civic supported-election dropdown
 - Google sign-in with local user sessions
 - saved-slate API and UI for public endorsement, measure-position, and voter-guide references
+- private-alpha launch runbook with tester flow and pass/fail checks
 - no raw address storage in current runtime
 
 ## Private alpha goals
@@ -97,11 +98,12 @@ Post-alpha role. Public submissions are not in private alpha.
 3. User can optionally use Civic lookup to find official election context.
 4. User opens detail panels to verify source, confidence, and review metadata.
 5. User saves relevant records if signed in.
+6. User can return to the directory, My Slate, or Admin through primary navigation.
 
 ### Save my slate
 
 1. User signs in.
-2. User saves endorsements. Measure positions and voter guides are follow-up saved item types.
+2. User saves endorsements, measure positions, and voter guides.
 3. User sees a “My Slate” view.
 4. User can remove saved items.
 5. User can export/print/share a non-sensitive slate summary.
@@ -257,6 +259,7 @@ Post-alpha should add:
 - `make verify` passes.
 - `make data-quality` passes.
 - Documentation states that registration status is not confirmed by DSA Slate.
+- Private-alpha launch runbook covers anonymous browse, Civic lookup, saved slate, editor/admin flow, negative role checks, and cleanup.
 
 ## Post-alpha scope
 
