@@ -57,7 +57,10 @@ db-shell: db-up ## Open psql in the Postgres container
 	$(COMPOSE) exec postgres psql -U "$${POSTGRES_USER:-dsa_slate}" -d "$${POSTGRES_DB:-dsa_slate}"
 
 migrate: db-up ## Apply SQL migrations to local Postgres
-	$(COMPOSE) exec -T postgres psql -v ON_ERROR_STOP=1 -U "$${POSTGRES_USER:-dsa_slate}" -d "$${POSTGRES_DB:-dsa_slate}" < migrations/0001_init.sql
+	@for migration in migrations/*.sql; do \
+		printf 'Applying %s\n' "$$migration"; \
+		$(COMPOSE) exec -T postgres psql -v ON_ERROR_STOP=1 -U "$${POSTGRES_USER:-dsa_slate}" -d "$${POSTGRES_DB:-dsa_slate}" < "$$migration"; \
+	done
 
 db-reset: ## Reset local Postgres volume and rerun migrations
 	$(COMPOSE) down --volumes --remove-orphans
@@ -71,6 +74,7 @@ seed: migrate seed-chapters ## Apply the chapter directory and California electo
 
 data-quality: seed db-sync-password ## Run source-linked data quality checks against local seeded Postgres
 	@published_port="$$( $(COMPOSE) port postgres 5432 )"; \
+	if [ -f .env ]; then set -a; source .env; set +a; fi; \
 	postgres_port="$${published_port##*:}"; \
 	DATABASE_HOST="$${DATABASE_HOST:-localhost}"; \
 	DATABASE_PORT="$${DATABASE_PORT:-$${POSTGRES_PORT:-$${postgres_port:-5432}}}"; \

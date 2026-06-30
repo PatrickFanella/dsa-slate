@@ -8,12 +8,13 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	appcfg "git.subcult.tv/subculture-collective/dsa-slate/internal/app"
 	"git.subcult.tv/subculture-collective/dsa-slate/internal/directory"
 )
 
 func main() {
 	ctx := context.Background()
-	databaseURL := os.Getenv("DATABASE_URL")
+	databaseURL := appcfg.DatabaseURL()
 	if databaseURL == "" {
 		fmt.Fprintln(os.Stderr, "DATABASE_URL is required")
 		os.Exit(2)

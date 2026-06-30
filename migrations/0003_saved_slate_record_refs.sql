@@ -2,12 +2,22 @@ ALTER TABLE saved_slate_items
   ADD COLUMN IF NOT EXISTS record_type text,
   ADD COLUMN IF NOT EXISTS record_id text;
 
-UPDATE saved_slate_items
-SET record_type = 'endorsement',
-    record_id = endorsement_id
-WHERE record_type IS NULL
-  AND record_id IS NULL
-  AND endorsement_id IS NOT NULL;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_name = 'saved_slate_items'
+      AND column_name = 'endorsement_id'
+  ) THEN
+    UPDATE saved_slate_items
+    SET record_type = 'endorsement',
+        record_id = endorsement_id
+    WHERE record_type IS NULL
+      AND record_id IS NULL
+      AND endorsement_id IS NOT NULL;
+  END IF;
+END $$;
 
 ALTER TABLE saved_slate_items
   ALTER COLUMN record_type SET NOT NULL,
@@ -22,8 +32,21 @@ DROP INDEX IF EXISTS saved_slate_items_endorsement_id_idx;
 ALTER TABLE saved_slate_items
   DROP COLUMN IF EXISTS endorsement_id;
 
-ALTER TABLE saved_slate_items
-  ADD CONSTRAINT saved_slate_items_record_type_check CHECK (record_type IN ('endorsement', 'measure_position', 'voter_guide')),
-  ADD CONSTRAINT saved_slate_items_user_record_key UNIQUE (user_id, record_type, record_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'saved_slate_items_record_type_check'
+  ) THEN
+    ALTER TABLE saved_slate_items
+      ADD CONSTRAINT saved_slate_items_record_type_check CHECK (record_type IN ('endorsement', 'measure_position', 'voter_guide'));
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'saved_slate_items_user_record_key'
+  ) THEN
+    ALTER TABLE saved_slate_items
+      ADD CONSTRAINT saved_slate_items_user_record_key UNIQUE (user_id, record_type, record_id);
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS saved_slate_items_record_idx ON saved_slate_items(record_type, record_id);
