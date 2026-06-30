@@ -1,4 +1,5 @@
 import { SourceBadge } from './SourceBadge';
+import type { SaveActionProps } from './DirectoryCard';
 import { endorsementTypeLabel } from '../data/schema';
 import type { DirectoryCardData, EndorsementCardData, MeasureCardData, VoterGuideCardData } from '../data';
 
@@ -6,7 +7,7 @@ type DetailItem = DirectoryCardData;
 
 type DetailPanelProps = {
   item?: DetailItem;
-};
+} & SaveActionProps;
 
 function DetailRow({ label, value }: { label: string; value?: string }) {
   if (!value) {
@@ -52,7 +53,7 @@ function ReviewMetadata({ reviewedAt, reviewNotes }: { reviewedAt?: string; revi
   );
 }
 
-export function DetailPanel({ item }: DetailPanelProps) {
+export function DetailPanel({ authenticated, item, onToggleSaved, saved, saving }: DetailPanelProps) {
   if (!item) {
     return (
       <aside
@@ -82,14 +83,28 @@ export function DetailPanel({ item }: DetailPanelProps) {
       <h2 className="mt-3 text-3xl font-black text-foreground">{title}</h2>
       <p className="mt-3 text-sm leading-6 text-muted">Recorded from source-linked public DSA electoral material.</p>
 
-      {item.kind === 'endorsement' ? <EndorsementDetail item={item} /> : null}
+      {item.kind === 'endorsement' ? (
+        <EndorsementDetail
+          authenticated={authenticated}
+          item={item}
+          onToggleSaved={onToggleSaved}
+          saved={saved}
+          saving={saving}
+        />
+      ) : null}
       {item.kind === 'measure' ? <MeasureDetail item={item} /> : null}
       {item.kind === 'voterGuide' ? <VoterGuideDetail item={item} /> : null}
     </aside>
   );
 }
 
-function EndorsementDetail({ item }: { item: EndorsementCardData }) {
+function EndorsementDetail({
+  authenticated,
+  item,
+  onToggleSaved,
+  saved,
+  saving,
+}: { item: EndorsementCardData } & SaveActionProps) {
   return (
     <>
       <SourceBadge
@@ -109,6 +124,24 @@ function EndorsementDetail({ item }: { item: EndorsementCardData }) {
         <DetailRow label="Notes" value={item.notes} />
       </dl>
       <ReviewMetadata reviewedAt={item.reviewedAt} reviewNotes={item.reviewNotes} />
+      {onToggleSaved ? (
+        <button
+          className="mt-5 w-full rounded-none border-2 border-border-strong bg-primary px-4 py-3 font-black text-primary-foreground transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          disabled={!authenticated || saving}
+          type="button"
+          onClick={onToggleSaved}
+        >
+          {saving
+            ? saved
+              ? 'Removing…'
+              : 'Saving…'
+            : saved
+              ? 'Remove from my slate'
+              : authenticated
+                ? 'Save to my slate'
+                : 'Sign in to save this endorsement'}
+        </button>
+      ) : null}
       <div className="mt-4 flex flex-wrap gap-4 text-sm font-bold">
         <DetailLink href={item.candidateCampaignUrl} label="Candidate site" />
         <DetailLink href={item.chapterWebsiteUrl} label="Chapter site" />

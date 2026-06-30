@@ -6,6 +6,7 @@ import { MethodologyPanel } from './components/MethodologyPanel';
 import { allDirectoryCards, buildDirectoryCards, type DirectoryCardKey } from './data';
 import { fetchAuthSession, logout as logoutAuth, type AuthState } from './data/authApi';
 import { filterDirectoryCards } from './data/filter';
+import { deleteSlateItem, fetchSavedSlate, saveSlateItem, type SavedSlateItem } from './data/savedSlateApi';
 import type { BrowseFilters } from './data/api';
 import { useDirectoryData, type DirectoryLoadStatus } from './data/useDirectoryData';
 import type { ReactNode } from 'react';
@@ -17,6 +18,10 @@ const THEME_STORAGE_KEY = 'dsa-slate-theme';
 
 function isAdminRoute(): boolean {
   return typeof window !== 'undefined' && window.location.pathname === '/admin';
+}
+
+function isSavedSlateRoute(): boolean {
+  return typeof window !== 'undefined' && window.location.pathname === '/me/slate';
 }
 
 function readStoredTheme(): ThemeMode | null {
@@ -54,6 +59,10 @@ function PublicHomePage() {
   const [raceLevel, setRaceLevel] = useState('');
   const [selectedCardKey, setSelectedCardKey] = useState<DirectoryCardKey | undefined>(undefined);
   const [theme, setTheme] = useState<ThemeMode>(() => getInitialTheme());
+  const [authState, setAuthState] = useState<AuthState>({ authenticated: false });
+  const [savedItems, setSavedItems] = useState<SavedSlateItem[]>([]);
+  const [savingEndorsementId, setSavingEndorsementId] = useState<string | undefined>(undefined);
+  const [slateMessage, setSlateMessage] = useState<string | undefined>(undefined);
   const browseFilters = useMemo<BrowseFilters>(
     () => ({
       chapterId: chapterId || undefined,
@@ -93,6 +102,11 @@ function PublicHomePage() {
   const visibleResultCount = endorsementCards.length + measureCards.length + voterGuideCards.length;
   const hasResults = visibleResultCount > 0;
   const noVisibleResults = !hasResults;
+  const savedItemByEndorsementId = useMemo(
+    () => new Map(savedItems.map((item) => [item.endorsementId, item])),
+    [savedItems],
+  );
+  const selectedSavedItem = selectedCard?.kind === 'endorsement' ? savedItemByEndorsementId.get(selectedCard.id) : undefined;
 
   useEffect(() => {
     if (selectedCardKey && !selectedCard) {
@@ -105,7 +119,60 @@ function PublicHomePage() {
     writeStoredTheme(theme);
   }, [theme]);
 
+  useEffect(() => {
+    let active = true;
+
+    fetchAuthSession()
+      .then((state) => {
+        if (active) {
+          setAuthState(state);
+        }
+        if (!active || !state.authenticated) {
+          return undefined;
+        }
+        return fetchSavedSlate().then((slate) => {
+          if (active) {
+            setSavedItems(slate.items);
+          }
+        });
+      })
+      .catch(() => {
+        if (active) {
+          setAuthState({ authenticated: false });
+          setSavedItems([]);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const nextTheme = theme === 'light' ? 'dark' : 'light';
+  const toggleSaved = async (endorsementId: string) => {
+    if (!authState.authenticated) {
+      setSlateMessage('Sign in with Google to save endorsements to your slate.');
+      return;
+    }
+    setSavingEndorsementId(endorsementId);
+    setSlateMessage(undefined);
+    try {
+      const existing = savedItemByEndorsementId.get(endorsementId);
+      if (existing) {
+        await deleteSlateItem(existing.id);
+        setSavedItems((items) => items.filter((item) => item.id !== existing.id));
+        setSlateMessage('Removed from your slate.');
+      } else {
+        const item = await saveSlateItem(endorsementId);
+        setSavedItems((items) => [...items.filter((saved) => saved.endorsementId !== endorsementId), item]);
+        setSlateMessage('Saved to your slate.');
+      }
+    } catch {
+      setSlateMessage('Could not update your slate. Try again.');
+    } finally {
+      setSavingEndorsementId(undefined);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-background px-6 py-10 text-foreground">
@@ -140,7 +207,13 @@ function PublicHomePage() {
               Methodology & disclaimer
             </a>
           </div>
-          <AuthShell />
+          <AuthShell authState={authState} onAuthStateChange={setAuthState} onSignedOut={() => setSavedItems([])} />
+          <p className="mt-3 text-sm leading-6 text-muted" aria-live="polite">
+            <a className="font-black text-primary underline-offset-4 hover:underline" href="/me/slate">
+              My Slate
+            </a>
+            {' '}saves public endorsement references only. {slateMessage ?? `${savedItems.length} saved.`}
+          </p>
           <div className="mt-8 grid gap-3 rounded-none border-2 border-border bg-surface-muted p-4 md:grid-cols-[1fr_auto]">
             <label className="sr-only" htmlFor="slate-search">
               Text search candidates, chapters, offices, elections, or voter guides
@@ -236,7 +309,13 @@ function PublicHomePage() {
 
         <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start">
           <div className="lg:order-2 lg:sticky lg:top-6">
-            <DetailPanel item={selectedCard} />
+            <DetailPanel
+              authenticated={authState.authenticated}
+              item={selectedCard}
+              onToggleSaved={selectedCard?.kind === 'endorsement' ? () => toggleSaved(selectedCard.id) : undefined}
+              saved={Boolean(selectedSavedItem)}
+              saving={selectedCard?.kind === 'endorsement' && savingEndorsementId === selectedCard.id}
+            />
           </div>
           <div className="flex flex-col gap-10 lg:order-1">
             {noVisibleResults ? (
@@ -273,8 +352,12 @@ function PublicHomePage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   {endorsementCards.map((item) => (
                     <EndorsementCard
+                      authenticated={authState.authenticated}
                       item={item}
                       key={item.id}
+                      onToggleSaved={() => toggleSaved(item.id)}
+                      saved={savedItemByEndorsementId.has(item.id)}
+                      saving={savingEndorsementId === item.id}
                       selected={selectedCardKey === item.key}
                       onSelect={() => setSelectedCardKey(item.key)}
                     />
@@ -315,7 +398,117 @@ function PublicHomePage() {
 }
 
 export default function App() {
-  return isAdminRoute() ? <AdminPanel /> : <PublicHomePage />;
+  if (isAdminRoute()) {
+    return <AdminPanel />;
+  }
+  if (isSavedSlateRoute()) {
+    return <SavedSlatePage />;
+  }
+  return <PublicHomePage />;
+}
+
+function SavedSlatePage() {
+  const [authState, setAuthState] = useState<AuthState>({ authenticated: false });
+  const [savedItems, setSavedItems] = useState<SavedSlateItem[]>([]);
+  const [message, setMessage] = useState<string>('Checking signed-in session.');
+  const directoryState = useDirectoryData(fetch, {});
+  const endorsementCards = useMemo(() => buildDirectoryCards(directoryState.data).endorsements, [directoryState.data]);
+  const savedEndorsementIds = useMemo(() => new Set(savedItems.map((item) => item.endorsementId)), [savedItems]);
+  const savedCards = endorsementCards.filter((card) => savedEndorsementIds.has(card.id));
+  const itemByEndorsementId = useMemo(() => new Map(savedItems.map((item) => [item.endorsementId, item])), [savedItems]);
+
+  useEffect(() => {
+    let active = true;
+
+    fetchAuthSession()
+      .then((state) => {
+        if (!active) {
+          return undefined;
+        }
+        setAuthState(state);
+        if (!state.authenticated) {
+          setMessage('Sign in to view and save your slate.');
+          return undefined;
+        }
+        return fetchSavedSlate().then((slate) => {
+          if (active) {
+            setSavedItems(slate.items);
+            setMessage(`${slate.items.length} saved ${slate.items.length === 1 ? 'endorsement' : 'endorsements'}.`);
+          }
+        });
+      })
+      .catch(() => {
+        if (active) {
+          setAuthState({ authenticated: false });
+          setSavedItems([]);
+          setMessage('Could not load your saved slate.');
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const removeSaved = async (endorsementId: string) => {
+    const item = itemByEndorsementId.get(endorsementId);
+    if (!item) {
+      return;
+    }
+    try {
+      await deleteSlateItem(item.id);
+      setSavedItems((items) => items.filter((saved) => saved.id !== item.id));
+      setMessage('Removed from your slate.');
+    } catch {
+      setMessage('Could not remove that endorsement. Try again.');
+    }
+  };
+
+  return (
+    <main className="min-h-screen bg-background px-6 py-10 text-foreground">
+      <section className="mx-auto flex max-w-5xl flex-col gap-8">
+        <header className="rounded-none border-2 border-border-strong bg-surface p-8 shadow-[10px_10px_0_var(--theme-shadow)]">
+          <p className="text-sm font-black uppercase tracking-[0.28em] text-primary">My Slate</p>
+          <h1 className="mt-4 font-display text-4xl font-black tracking-tight text-foreground">Saved endorsements</h1>
+          <p className="mt-4 max-w-3xl text-lg leading-8 text-muted">
+            Your slate stores references to public endorsements only. Raw voter addresses are not stored.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <a className="rounded-none border-2 border-primary bg-primary px-5 py-3 font-black text-primary-foreground" href="/">
+              Back to directory
+            </a>
+            {!authState.authenticated ? (
+              <a className="rounded-none border-2 border-border-strong bg-surface px-5 py-3 font-black text-foreground" href="/api/auth/google/start">
+                Sign in with Google
+              </a>
+            ) : null}
+          </div>
+          <p className="mt-4 rounded-none border-2 border-border bg-surface-muted px-4 py-3 text-sm leading-6 text-muted" aria-live="polite">
+            {message}
+          </p>
+          <DirectoryDataStatus errorMessage={directoryState.errorMessage} status={directoryState.status} />
+        </header>
+
+        {authState.authenticated && savedCards.length === 0 ? (
+          <EmptyStateCard message="No saved endorsements yet. Return to the directory and save candidate endorsements to build your slate." />
+        ) : null}
+
+        {authState.authenticated && savedCards.length > 0 ? (
+          <section className="grid gap-4 md:grid-cols-2">
+            {savedCards.map((item) => (
+              <EndorsementCard
+                authenticated
+                item={item}
+                key={item.id}
+                onToggleSaved={() => removeSaved(item.id)}
+                saved
+              />
+            ))}
+          </section>
+        ) : null}
+      </section>
+    </main>
+  );
 }
 
 function DirectorySection({
@@ -351,29 +544,15 @@ function StatCard({ label, value }: { label: string; value: string }) {
   );
 }
 
-function AuthShell() {
-  const [authState, setAuthState] = useState<AuthState>({ authenticated: false });
-
-  useEffect(() => {
-    let active = true;
-
-    fetchAuthSession()
-      .then((state) => {
-        if (active) {
-          setAuthState(state);
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setAuthState({ authenticated: false });
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
+function AuthShell({
+  authState,
+  onAuthStateChange,
+  onSignedOut,
+}: {
+  authState: AuthState;
+  onAuthStateChange: (state: AuthState) => void;
+  onSignedOut: () => void;
+}) {
   if (!authState.authenticated || !authState.user) {
     return (
       <div className="mt-4 flex flex-wrap items-center gap-3 rounded-none border-2 border-border bg-surface-muted px-4 py-3 text-sm text-muted">
@@ -401,9 +580,11 @@ function AuthShell() {
         onClick={async () => {
           try {
             const state = await logoutAuth();
-            setAuthState(state);
+            onAuthStateChange(state);
+            onSignedOut();
           } catch {
-            setAuthState({ authenticated: false });
+            onAuthStateChange({ authenticated: false });
+            onSignedOut();
           }
         }}
       >

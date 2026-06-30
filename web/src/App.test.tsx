@@ -68,6 +68,9 @@ describe('App', () => {
     expect(html).toMatch(/Light.*theme/);
     expect(html).toContain('How this directory is built');
     expect(html).toContain('Sign in with Google');
+    expect(html).toContain('My Slate');
+    expect(html).toContain('Sign in to save');
+    expect(html).toContain('saves public endorsement references only');
     expect(html).toContain('Voter guides');
     expect(html).toContain('Search this source-linked directory');
     expect(html).toContain('Browse filters use public API fields. Text search stays local. Raw addresses are not stored.');
@@ -93,7 +96,7 @@ describe('App', () => {
     expect(html).toContain('The public label stays as the original source used it.');
     expect(html).toContain('DSA Slate links to official election information and does not replace official voter or election sources.');
     expect(html).toContain('aria-live="polite"');
-    expect(html).not.toContain('disabled');
+    expect(html).toContain('disabled');
     expect(html).toContain('Corinna Contreras');
     expect(html).toContain('Recommended');
     expect(html).toContain('Official source');
@@ -111,6 +114,23 @@ describe('App', () => {
 
     expect(html).toContain('Official source');
     expect(html).toContain('Original source');
+  });
+
+  it('renders the saved slate page on /me/slate', () => {
+    const restore = setPathname('/me/slate');
+
+    try {
+      const html = renderToString(<App />);
+
+      expect(html).toContain('Saved endorsements');
+      expect(html).toContain('Your slate stores references to public endorsements only. Raw voter addresses are not stored.');
+      expect(html).toContain('Checking signed-in session.');
+      expect(html).toContain('Back to directory');
+      expect(html).toContain('Sign in with Google');
+      expect(html).not.toContain('DSA Slate Admin');
+    } finally {
+      restore();
+    }
   });
 
   it('shows selected record details with source metadata', () => {

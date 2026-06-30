@@ -7,6 +7,13 @@ type SelectableCardProps = {
   onSelect?: () => void;
 };
 
+export type SaveActionProps = {
+  authenticated?: boolean;
+  saved?: boolean;
+  saving?: boolean;
+  onToggleSaved?: () => void;
+};
+
 function cardClassName(selected: boolean | undefined): string {
   return [
     'rounded-none border-2 bg-surface p-5 text-left shadow-[4px_4px_0_var(--theme-shadow)] transition',
@@ -28,7 +35,15 @@ function SelectionButton({ children, onSelect, selected }: SelectableCardProps &
   );
 }
 
-export function EndorsementCard({ item, onSelect, selected }: { item: EndorsementCardData } & SelectableCardProps) {
+export function EndorsementCard({
+  authenticated,
+  item,
+  onSelect,
+  onToggleSaved,
+  saved,
+  saving,
+  selected,
+}: { item: EndorsementCardData } & SelectableCardProps & SaveActionProps) {
   const raceLine = [item.office, item.district, item.electionName].filter(Boolean).join(' · ');
 
   return (
@@ -44,6 +59,16 @@ export function EndorsementCard({ item, onSelect, selected }: { item: Endorsemen
         sourceDate={item.sourceDate}
         sourceUrl={item.sourceUrl}
       />
+      {onToggleSaved ? (
+        <button
+          className="mt-4 w-full rounded-none border-2 border-border-strong bg-surface-muted px-4 py-2 text-sm font-black text-foreground transition hover:bg-surface-accent disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          disabled={!authenticated || saving}
+          type="button"
+          onClick={onToggleSaved}
+        >
+          {saving ? (saved ? 'Removing…' : 'Saving…') : saved ? 'Remove from my slate' : authenticated ? 'Save to my slate' : 'Sign in to save'}
+        </button>
+      ) : null}
     </article>
   );
 }
