@@ -5,7 +5,7 @@ COMPOSE := docker compose
 WEB := pnpm --dir web
 
 .PHONY: help verify deps fmt lint test build compose-config open-pilot-check \
-	containers-up containers-down containers-clean logs db-up db-shell migrate db-reset seed-chapters seed data-quality dev-web dev-api api-smoke dev dev-full
+	containers-up containers-down containers-clean logs db-up db-sync-password db-shell migrate db-reset seed-chapters seed data-quality dev-web dev-api api-smoke dev dev-full
 
 help:
 	@awk 'BEGIN {FS = ":.*##"; printf "Commands:\n"} /^[a-zA-Z0-9_-]+:.*##/ {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -50,6 +50,9 @@ logs: ## Follow compose logs
 db-up: ## Start Postgres and wait until healthy
 	$(COMPOSE) up -d --wait postgres
 
+db-sync-password: db-up ## Sync local Postgres role password from .env/compose env without printing it
+	python3 scripts/sync_postgres_password_sql.py | $(COMPOSE) exec -T postgres sh -lc 'psql -v ON_ERROR_STOP=1 -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" >/dev/null'
+
 db-shell: db-up ## Open psql in the Postgres container
 	$(COMPOSE) exec postgres psql -U "$${POSTGRES_USER:-dsa_slate}" -d "$${POSTGRES_DB:-dsa_slate}"
 
@@ -66,23 +69,25 @@ seed-chapters: migrate ## Apply the one-time imported DSA chapter directory seed
 seed: migrate seed-chapters ## Apply the chapter directory and California electoral seed fixtures
 	$(COMPOSE) exec -T postgres psql -v ON_ERROR_STOP=1 -U "$${POSTGRES_USER:-dsa_slate}" -d "$${POSTGRES_DB:-dsa_slate}" < seeds/california.sql
 
-data-quality: seed ## Run source-linked data quality checks against local seeded Postgres
+data-quality: seed db-sync-password ## Run source-linked data quality checks against local seeded Postgres
 	@published_port="$$( $(COMPOSE) port postgres 5432 )"; \
 	postgres_port="$${published_port##*:}"; \
-	DATABASE_URL="$${DATABASE_URL:-postgres://$${POSTGRES_USER:-dsa_slate}:$${POSTGRES_PASSWORD:-change-me}@localhost:$${POSTGRES_PORT:-$${postgres_port:-5432}}/$${POSTGRES_DB:-dsa_slate}?sslmode=disable}"; \
+	DATABASE_HOST="$${DATABASE_HOST:-localhost}"; \
+	DATABASE_PORT="$${DATABASE_PORT:-$${POSTGRES_PORT:-$${postgres_port:-5432}}}"; \
 	QUALITY_REFERENCE_DATE="$${QUALITY_REFERENCE_DATE:-2026-06-28}"; \
-	export DATABASE_URL QUALITY_REFERENCE_DATE; \
+	export DATABASE_HOST DATABASE_PORT POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB QUALITY_REFERENCE_DATE; \
 	cd backend && go run ./cmd/dataquality
 
 dev-web: deps ## Start local Vite frontend dev server
 	$(WEB) run dev
 
-dev-api: db-up ## Run the Go backend locally against compose Postgres
+dev-api: db-sync-password ## Run the Go backend locally against compose Postgres
 	@published_port="$$( $(COMPOSE) port postgres 5432 )"; \
 	if [ -f .env ]; then set -a; source .env; set +a; fi; \
 	postgres_port="$${published_port##*:}"; \
-	DATABASE_URL="$${DATABASE_URL:-postgres://$${POSTGRES_USER:-dsa_slate}:$${POSTGRES_PASSWORD:-change-me}@localhost:$${POSTGRES_PORT:-$${postgres_port:-5432}}/$${POSTGRES_DB:-dsa_slate}?sslmode=disable}"; \
-	export DATABASE_URL GOOGLE_CIVIC_API_KEY ADMIN_API_TOKEN; \
+	DATABASE_HOST="$${DATABASE_HOST:-localhost}"; \
+	DATABASE_PORT="$${DATABASE_PORT:-$${POSTGRES_PORT:-$${postgres_port:-5432}}}"; \
+	export DATABASE_HOST DATABASE_PORT POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB GOOGLE_CIVIC_API_KEY ADMIN_API_TOKEN; \
 	cd backend && go run ./cmd/app
 
 api-smoke: ## Curl the local API health and directory endpoints

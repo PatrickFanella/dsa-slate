@@ -22,7 +22,7 @@ func main() {
 		port = "8080"
 	}
 
-	databaseURL := os.Getenv("DATABASE_URL")
+	databaseURL := appcfg.DatabaseURL()
 	if databaseURL == "" {
 		log.Fatal("DATABASE_URL is required; set it or use docker compose to start the Postgres-backed API")
 	}
