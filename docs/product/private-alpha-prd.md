@@ -22,9 +22,11 @@ Already built:
 - source-linked detail panel
 - review metadata in details
 - data-quality command
-- token-protected admin draft console for chapter and endorsement drafts
+- session-gated admin draft console for chapter and endorsement drafts
 - anonymous Civic lookup endpoint and public lookup panel
 - Civic supported-election dropdown
+- Google sign-in with local user sessions
+- saved-slate API and UI for public endorsement references
 - no raw address storage in current runtime
 
 ## Private alpha goals
@@ -99,8 +101,8 @@ Post-alpha role. Public submissions are not in private alpha.
 ### Save my slate
 
 1. User signs in.
-2. User saves endorsements, measure positions, and voter guides.
-3. User sees a “My Slate” view grouped by election/chapter/race.
+2. User saves endorsements. Measure positions and voter guides are follow-up saved item types.
+3. User sees a “My Slate” view.
 4. User can remove saved items.
 5. User can export/print/share a non-sensitive slate summary.
 
@@ -143,7 +145,7 @@ Only after privacy/security design:
 ### Review and publish electoral data
 
 1. Editor opens `/admin`.
-2. Editor enters token or future authenticated admin session.
+2. Editor uses an authenticated `editor` or `admin` session.
 3. Editor creates a draft.
 4. Draft is validated.
 5. Editor publishes reviewed draft.
@@ -178,6 +180,7 @@ Private alpha must support saving:
 - optional notes or labels later
 
 Saved slate records must reference public IDs, not duplicate source text.
+Current implementation saves endorsement IDs first; measure position and voter guide saved items remain follow-up work.
 
 ### Civic integration
 
@@ -244,7 +247,8 @@ Post-alpha should add:
 ## Private alpha acceptance criteria
 
 - Invited user can sign in.
-- Signed-in user can save and remove at least one endorsement, one measure position, and one voter guide.
+- Signed-in user can save and remove at least one endorsement.
+- Follow-up: signed-in user can save one measure position and one voter guide.
 - Signed-in user can view “My Slate.”
 - Anonymous user can still browse without an account.
 - Civic lookup works with supported-election dropdown.
@@ -270,7 +274,8 @@ Post-alpha should add:
 
 1. Auth/session foundation.
 2. Role-gated admin console.
-3. Saved slate data model/API.
-4. Saved slate UI.
-5. Private alpha polish pass.
-6. Privacy/security design for opt-in saved addresses.
+3. Saved slate data model/API for endorsements.
+4. Saved slate UI for endorsements.
+5. Add measure-position and voter-guide saved item support.
+6. Private alpha polish pass.
+7. Privacy/security design for opt-in saved addresses.

@@ -206,7 +206,7 @@ No raw address table is part of private-alpha foundation.
 ### Saved slate endpoints
 
 - `GET /api/me/slate`
-- `POST /api/me/slate/items`
+- `PUT /api/me/slate/items`
 - `DELETE /api/me/slate/items/{id}`
 
 ### Admin endpoints
@@ -252,7 +252,9 @@ Router dependency is optional; current pathname switch can work for one more sli
 - saved state indicator on cards/details
 - “My Slate” page
 - remove saved item
-- grouped print-friendly slate view
+- grouped print-friendly slate view later
+
+Current slice covers endorsement saved items first. Add measure positions and voter guides as a follow-up once the saved item model supports multiple public record types.
 
 ### Admin UI
 
@@ -335,7 +337,7 @@ Before storing raw addresses, create a separate threat model covering:
 
 - saved slate table
 - API endpoints
-- join saved records against public directory data
+- saved endorsement references against public directory data
 - tests
 
 ### Slice 5: Saved slate UI
