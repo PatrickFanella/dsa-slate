@@ -83,9 +83,8 @@ function blankToUndefined(value: string): string | undefined {
   return trimmed === '' ? undefined : trimmed;
 }
 
-function adminHeaders(token: string, hasBody: boolean): HeadersInit {
+function adminHeaders(hasBody: boolean): HeadersInit {
   return {
-    Authorization: `Bearer ${token}`,
     Accept: 'application/json',
     ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
   };
@@ -121,14 +120,13 @@ function parseAdminErrorBody(body: unknown): { error: string; messages: string[]
 
 async function requestAdminJson<T>(
   fetcher: AdminFetch,
-  token: string,
   input: RequestInfo | URL,
   init: RequestInit = {},
 ): Promise<T> {
   const response = await fetcher(input, {
     ...init,
     headers: {
-      ...adminHeaders(token, Boolean(init.body)),
+      ...adminHeaders(Boolean(init.body)),
       ...(init.headers ?? {}),
     },
   });
@@ -242,72 +240,68 @@ export function adminEndorsementDraftToForm(draft: Partial<AdminEndorsementDraft
   };
 }
 
-export async function listAdminChapterDrafts(token: string, fetcher: AdminFetch = fetch): Promise<AdminChapterDraft[]> {
-  return requestAdminJson<AdminChapterDraft[]>(fetcher, token, '/api/admin/chapter-drafts');
+export async function listAdminChapterDrafts(fetcher: AdminFetch = fetch): Promise<AdminChapterDraft[]> {
+  return requestAdminJson<AdminChapterDraft[]>(fetcher, '/api/admin/chapter-drafts');
 }
 
 export async function loadAdminChapterDraft(
-  token: string,
   id: string,
   fetcher: AdminFetch = fetch,
 ): Promise<AdminChapterDraft> {
-  return requestAdminJson<AdminChapterDraft>(fetcher, token, `/api/admin/chapter-drafts/${encodeURIComponent(id)}`);
+  return requestAdminJson<AdminChapterDraft>(fetcher, `/api/admin/chapter-drafts/${encodeURIComponent(id)}`);
 }
 
 export async function saveAdminChapterDraft(
-  token: string,
   draft: AdminChapterDraftForm,
   fetcher: AdminFetch = fetch,
 ): Promise<AdminChapterDraft> {
-  return requestAdminJson<AdminChapterDraft>(fetcher, token, '/api/admin/chapter-drafts', {
+  return requestAdminJson<AdminChapterDraft>(fetcher, '/api/admin/chapter-drafts', {
     method: 'POST',
     body: JSON.stringify(toChapterDraftPayload(draft)),
   });
 }
 
-export async function publishAdminChapterDraft(token: string, id: string, fetcher: AdminFetch = fetch): Promise<void> {
-  await requestAdminJson(fetcher, token, `/api/admin/chapter-drafts/${encodeURIComponent(id)}/publish`, {
+export async function publishAdminChapterDraft(id: string, fetcher: AdminFetch = fetch): Promise<void> {
+  await requestAdminJson(fetcher, `/api/admin/chapter-drafts/${encodeURIComponent(id)}/publish`, {
     method: 'POST',
   });
 }
 
-export async function archiveAdminChapterDraft(token: string, id: string, fetcher: AdminFetch = fetch): Promise<void> {
-  await requestAdminJson(fetcher, token, `/api/admin/chapter-drafts/${encodeURIComponent(id)}/archive`, {
+export async function archiveAdminChapterDraft(id: string, fetcher: AdminFetch = fetch): Promise<void> {
+  await requestAdminJson(fetcher, `/api/admin/chapter-drafts/${encodeURIComponent(id)}/archive`, {
     method: 'POST',
   });
 }
 
-export async function listAdminEndorsementDrafts(token: string, fetcher: AdminFetch = fetch): Promise<AdminEndorsementDraft[]> {
-  return requestAdminJson<AdminEndorsementDraft[]>(fetcher, token, '/api/admin/endorsement-drafts');
+export async function listAdminEndorsementDrafts(fetcher: AdminFetch = fetch): Promise<AdminEndorsementDraft[]> {
+  return requestAdminJson<AdminEndorsementDraft[]>(fetcher, '/api/admin/endorsement-drafts');
 }
 
 export async function loadAdminEndorsementDraft(
-  token: string,
   id: string,
   fetcher: AdminFetch = fetch,
 ): Promise<AdminEndorsementDraft> {
-  return requestAdminJson<AdminEndorsementDraft>(fetcher, token, `/api/admin/endorsement-drafts/${encodeURIComponent(id)}`);
+  return requestAdminJson<AdminEndorsementDraft>(fetcher, `/api/admin/endorsement-drafts/${encodeURIComponent(id)}`);
 }
 
 export async function saveAdminEndorsementDraft(
-  token: string,
   draft: AdminEndorsementDraftForm,
   fetcher: AdminFetch = fetch,
 ): Promise<AdminEndorsementDraft> {
-  return requestAdminJson<AdminEndorsementDraft>(fetcher, token, '/api/admin/endorsement-drafts', {
+  return requestAdminJson<AdminEndorsementDraft>(fetcher, '/api/admin/endorsement-drafts', {
     method: 'POST',
     body: JSON.stringify(toEndorsementDraftPayload(draft)),
   });
 }
 
-export async function publishAdminEndorsementDraft(token: string, id: string, fetcher: AdminFetch = fetch): Promise<void> {
-  await requestAdminJson(fetcher, token, `/api/admin/endorsement-drafts/${encodeURIComponent(id)}/publish`, {
+export async function publishAdminEndorsementDraft(id: string, fetcher: AdminFetch = fetch): Promise<void> {
+  await requestAdminJson(fetcher, `/api/admin/endorsement-drafts/${encodeURIComponent(id)}/publish`, {
     method: 'POST',
   });
 }
 
-export async function archiveAdminEndorsementDraft(token: string, id: string, fetcher: AdminFetch = fetch): Promise<void> {
-  await requestAdminJson(fetcher, token, `/api/admin/endorsement-drafts/${encodeURIComponent(id)}/archive`, {
+export async function archiveAdminEndorsementDraft(id: string, fetcher: AdminFetch = fetch): Promise<void> {
+  await requestAdminJson(fetcher, `/api/admin/endorsement-drafts/${encodeURIComponent(id)}/archive`, {
     method: 'POST',
   });
 }

@@ -17,12 +17,13 @@ First trusted-directory slice:
 - candidate recommendation, ballot measure, and voter guide cards
 - source URLs, source dates, and confidence labels on every public item
 - manual seed-file workflow with documented editorial rules
+- authenticated saved-slate API for saving public endorsement references
 - no raw voter address storage
 
 Out of scope for the first launch: address lookup, admin UI, public submissions, live election-night results, campaign coordination, address storage, and automated nationwide scraping.
 
-Editorial/admin writes still use a local bearer token from `ADMIN_API_TOKEN`; the draft console remains at `/admin`.
-Google OIDC sign-in is available for local user sessions; open the home page and click “Sign in with Google”.
+Editorial/admin writes require a signed-in `editor` or `admin`; the draft console remains at `/admin`.
+Google OIDC sign-in is available for local user sessions; open the home page and click “Sign in with Google”. `ADMIN_API_TOKEN` is only a temporary local/server fallback when the auth store is not wired, not browser UI auth.
 
 ## Stack
 
@@ -56,7 +57,7 @@ make logs           # follow compose logs
 
 For the API-backed frontend flow, run `make seed` or `make dev-full` first so the database has directory data, then start the API with `make dev-api` and run `make dev-web` in another terminal. The Vite dev server proxies `/api` to `http://localhost:8080`, so the frontend can read live directory data while keeping the checked-in California seed as fallback.
 
-Admin draft endpoints are token-protected and local-only; they are not public submission forms.
+Admin draft endpoints are session-gated for authenticated editors/admins and local/editorial-only; they are not public submission forms.
 
 ## Development / API
 
@@ -76,6 +77,7 @@ Recommended feature order: stabilize the read API and seed data first, then buil
 - The public homepage includes a Civic lookup panel with a supported-election dropdown for anonymous address-based election info; the submitted address stays in browser component state only.
 - For local Google sign-in, configure `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REDIRECT_URL`, and `APP_BASE_URL`. In Google Cloud Console, add this redirect URI: `http://localhost:5173/api/auth/google/callback`.
 - Google sign-in creates local `user` accounts. Existing `editor`/`admin` emails must have an explicit Google OAuth identity link before they can inherit privileged roles.
+- Signed-in users can save public endorsement references through the saved-slate API. The app stores user IDs and endorsement IDs, not raw voter addresses.
 
 ## Open Pilot
 

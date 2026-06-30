@@ -14,6 +14,7 @@ import (
 	"git.subcult.tv/subculture-collective/dsa-slate/internal/auth"
 	"git.subcult.tv/subculture-collective/dsa-slate/internal/civic"
 	"git.subcult.tv/subculture-collective/dsa-slate/internal/directory"
+	"git.subcult.tv/subculture-collective/dsa-slate/internal/savedslate"
 )
 
 func TestHealthz(t *testing.T) {
@@ -542,7 +543,7 @@ func TestAuthSessionResolved(t *testing.T) {
 }
 
 func TestAuthGoogleStartNotConfigured(t *testing.T) {
-	handler := NewServerWithAuthAndServices(directory.NewMemoryStore(directory.DirectoryData{}), &testAuthStore{}, nil, nil, "", nil)
+	handler := NewServerWithAuthAndServices(directory.NewMemoryStore(directory.DirectoryData{}), &testAuthStore{}, nil, nil, nil, "", nil)
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/api/auth/google/start", nil)
 
@@ -562,7 +563,7 @@ func TestAuthGoogleStartNotConfigured(t *testing.T) {
 
 func TestAuthGoogleStartDelegatesToService(t *testing.T) {
 	service := &testGoogleSignInService{startStatus: http.StatusFound, startLocation: "/api/auth/google/redirect"}
-	handler := NewServerWithAuthAndServices(directory.NewMemoryStore(directory.DirectoryData{}), &testAuthStore{}, service, nil, "", nil)
+	handler := NewServerWithAuthAndServices(directory.NewMemoryStore(directory.DirectoryData{}), &testAuthStore{}, service, nil, nil, "", nil)
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/api/auth/google/start", nil)
 
@@ -581,7 +582,7 @@ func TestAuthGoogleStartDelegatesToService(t *testing.T) {
 
 func TestAuthLogoutClearsCookieAndDeletesSession(t *testing.T) {
 	store := &testAuthStore{sessions: map[string]auth.Session{"session-1": {ID: "session-1", UserID: "user-1", ExpiresAt: time.Now().UTC().Add(time.Hour)}}}
-	handler := NewServerWithAuthAndServices(directory.NewMemoryStore(directory.DirectoryData{}), store, nil, nil, "", nil)
+	handler := NewServerWithAuthAndServices(directory.NewMemoryStore(directory.DirectoryData{}), store, nil, nil, nil, "", nil)
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/logout", nil)
 	req.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: "session-1"})
@@ -606,8 +607,95 @@ func TestAuthLogoutClearsCookieAndDeletesSession(t *testing.T) {
 	}
 }
 
-func TestAdminRoutesRequireToken(t *testing.T) {
-	handler := NewServerWithAdmin(directory.NewMemoryStore(directory.DirectoryData{}), &testAdminStore{}, "secret")
+func TestSavedSlateRejectsAnonymousSession(t *testing.T) {
+	handler := NewServerWithAuthAndServices(directory.NewMemoryStore(directory.DirectoryData{}), &testAuthStore{}, nil, nil, &testSavedSlateStore{}, "", nil)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/me/slate", nil)
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusUnauthorized)
+	}
+}
+
+func TestSavedSlateListAndUpsertForAuthenticatedUser(t *testing.T) {
+	store := &testSavedSlateStore{}
+	authStore := newTestAuthStoreWithSession("session-1", auth.User{ID: "user-1", Email: "reader@example.org", Role: auth.RoleUser})
+	handler := NewServerWithAuthAndServices(directory.NewMemoryStore(directory.DirectoryData{}), authStore, nil, nil, store, "", nil)
+
+	putRec := httptest.NewRecorder()
+	putReq := httptest.NewRequest(http.MethodPut, "/api/me/slate/items", strings.NewReader(`{"endorsementId":"endorsement-1"}`))
+	putReq.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: "session-1"})
+	handler.ServeHTTP(putRec, putReq)
+
+	if putRec.Code != http.StatusOK {
+		t.Fatalf("upsert status = %d, want %d", putRec.Code, http.StatusOK)
+	}
+	if store.lastUserID != "user-1" || store.lastEndorsementID != "endorsement-1" {
+		t.Fatalf("unexpected store call user=%q endorsement=%q", store.lastUserID, store.lastEndorsementID)
+	}
+	var item savedslate.Item
+	if err := json.NewDecoder(putRec.Body).Decode(&item); err != nil {
+		t.Fatalf("decode item: %v", err)
+	}
+	if item.ID == "" || item.UserID != "user-1" || item.EndorsementID != "endorsement-1" {
+		t.Fatalf("unexpected item: %#v", item)
+	}
+
+	getRec := httptest.NewRecorder()
+	getReq := httptest.NewRequest(http.MethodGet, "/api/me/slate", nil)
+	getReq.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: "session-1"})
+	handler.ServeHTTP(getRec, getReq)
+
+	if getRec.Code != http.StatusOK {
+		t.Fatalf("list status = %d, want %d", getRec.Code, http.StatusOK)
+	}
+	var slate savedslate.Slate
+	if err := json.NewDecoder(getRec.Body).Decode(&slate); err != nil {
+		t.Fatalf("decode slate: %v", err)
+	}
+	if len(slate.Items) != 1 || slate.Items[0].EndorsementID != "endorsement-1" {
+		t.Fatalf("unexpected slate: %#v", slate)
+	}
+}
+
+func TestSavedSlateDeleteRequiresOwner(t *testing.T) {
+	store := &testSavedSlateStore{
+		items: map[string][]savedslate.Item{
+			"owner-1": {{ID: "item-1", UserID: "owner-1", EndorsementID: "endorsement-1"}},
+		},
+	}
+	authStore := newTestAuthStoreWithSession("session-1", auth.User{ID: "user-2", Email: "other@example.org", Role: auth.RoleUser})
+	handler := NewServerWithAuthAndServices(directory.NewMemoryStore(directory.DirectoryData{}), authStore, nil, nil, store, "", nil)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodDelete, "/api/me/slate/items/item-1", nil)
+	req.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: "session-1"})
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusNotFound)
+	}
+}
+
+func TestSavedSlateRejectsInvalidEndorsementReference(t *testing.T) {
+	store := &testSavedSlateStore{invalidEndorsements: map[string]bool{"missing": true}}
+	authStore := newTestAuthStoreWithSession("session-1", auth.User{ID: "user-1", Email: "reader@example.org", Role: auth.RoleUser})
+	handler := NewServerWithAuthAndServices(directory.NewMemoryStore(directory.DirectoryData{}), authStore, nil, nil, store, "", nil)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPut, "/api/me/slate/items", strings.NewReader(`{"endorsementId":"missing"}`))
+	req.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: "session-1"})
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
+	}
+}
+
+func TestAdminRoutesRejectAnonymousSession(t *testing.T) {
+	handler := NewServerWithAuthAndServices(directory.NewMemoryStore(directory.DirectoryData{}), &testAuthStore{}, nil, &testAdminStore{}, nil, "", nil)
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/admin/chapter-drafts", strings.NewReader(`{"id":"draft-1"}`))
 
@@ -617,30 +705,39 @@ func TestAdminRoutesRequireToken(t *testing.T) {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusUnauthorized)
 	}
 
-	rec = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodPost, "/api/admin/chapter-drafts", strings.NewReader(`{"id":"draft-1"}`))
-	req.Header.Set("Authorization", "Bearer wrong")
-
-	handler.ServeHTTP(rec, req)
-
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusUnauthorized)
 	}
 }
 
-func TestAdminCreateChapterDraft(t *testing.T) {
+func TestAdminRoutesRejectUserRole(t *testing.T) {
+	authStore := newTestAuthStoreWithSession("session-1", auth.User{ID: "user-1", Email: "reader@example.org", Role: auth.RoleUser})
+	handler := NewServerWithAuthAndServices(directory.NewMemoryStore(directory.DirectoryData{}), authStore, nil, &testAdminStore{}, nil, "", nil)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/chapter-drafts", strings.NewReader(`{"id":"draft-1"}`))
+	req.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: "session-1"})
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusForbidden)
+	}
+}
+
+func TestAdminCreateChapterDraftAllowsEditorAndRecordsActor(t *testing.T) {
 	store := &testAdminStore{}
-	handler := NewServerWithAdmin(directory.NewMemoryStore(directory.DirectoryData{}), store, "secret")
+	authStore := newTestAuthStoreWithSession("session-1", auth.User{ID: "editor-1", Email: "editor@example.org", Role: auth.RoleEditor})
+	handler := NewServerWithAuthAndServices(directory.NewMemoryStore(directory.DirectoryData{}), authStore, nil, store, nil, "", nil)
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/admin/chapter-drafts", strings.NewReader(`{"id":"draft-1","chapterId":"chapter-1","name":"Chapter 1","state":"CA"}`))
-	req.Header.Set("Authorization", "Bearer secret")
+	req.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: "session-1"})
 
 	handler.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
 	}
-	if store.lastChapterDraft.ID != "draft-1" || store.lastActor != "admin" {
+	if store.lastChapterDraft.ID != "draft-1" || store.lastActor != "editor@example.org" {
 		t.Fatalf("unexpected store call: %#v actor=%q", store.lastChapterDraft, store.lastActor)
 	}
 
@@ -653,11 +750,30 @@ func TestAdminCreateChapterDraft(t *testing.T) {
 	}
 }
 
+func TestAdminCreateChapterDraftAllowsAdminAndRecordsIDActor(t *testing.T) {
+	store := &testAdminStore{}
+	authStore := newTestAuthStoreWithSession("session-1", auth.User{ID: "admin-1", Role: auth.RoleAdmin})
+	handler := NewServerWithAuthAndServices(directory.NewMemoryStore(directory.DirectoryData{}), authStore, nil, store, nil, "", nil)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/chapter-drafts", strings.NewReader(`{"id":"draft-1","chapterId":"chapter-1","name":"Chapter 1","state":"CA"}`))
+	req.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: "session-1"})
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+	if store.lastActor != "admin-1" {
+		t.Fatalf("actor = %q, want admin-1", store.lastActor)
+	}
+}
+
 func TestAdminCreateChapterDraftValidationFailure(t *testing.T) {
-	handler := NewServerWithAdmin(directory.NewMemoryStore(directory.DirectoryData{}), &testAdminStore{}, "secret")
+	authStore := newTestAuthStoreWithSession("session-1", auth.User{ID: "editor-1", Email: "editor@example.org", Role: auth.RoleEditor})
+	handler := NewServerWithAuthAndServices(directory.NewMemoryStore(directory.DirectoryData{}), authStore, nil, &testAdminStore{}, nil, "", nil)
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/admin/chapter-drafts", strings.NewReader(`{"id":"draft-1","chapterId":"chapter-1","name":"Chapter 1","state":"CA","websiteUrl":"ftp://example.com"}`))
-	req.Header.Set("Authorization", "Bearer secret")
+	req.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: "session-1"})
 
 	handler.ServeHTTP(rec, req)
 
@@ -708,6 +824,13 @@ type testAdminStore struct {
 	lastEndorsement   admin.EndorsementDraft
 }
 
+type testSavedSlateStore struct {
+	items               map[string][]savedslate.Item
+	invalidEndorsements map[string]bool
+	lastUserID          string
+	lastEndorsementID   string
+}
+
 type testGoogleSignInService struct {
 	startCalled      bool
 	callbackCalled   bool
@@ -743,6 +866,21 @@ type testAuthStore struct {
 	users      map[string]auth.User
 	sessions   map[string]auth.Session
 	identities map[string]auth.OAuthIdentity
+}
+
+func newTestAuthStoreWithSession(token string, user auth.User) *testAuthStore {
+	now := time.Now().UTC()
+	if user.ID == "" {
+		user.ID = "user-1"
+	}
+	return &testAuthStore{
+		users: map[string]auth.User{
+			user.ID: user,
+		},
+		sessions: map[string]auth.Session{
+			token: {ID: token, UserID: user.ID, ExpiresAt: now.Add(time.Hour), CreatedAt: now},
+		},
+	}
 }
 
 func (s *testAuthStore) UpsertUser(ctx context.Context, user auth.User) (auth.User, error) {
@@ -806,6 +944,48 @@ func (s *testAuthStore) GetSession(ctx context.Context, token string) (auth.Sess
 func (s *testAuthStore) DeleteSession(ctx context.Context, token string) error {
 	delete(s.sessions, token)
 	return nil
+}
+
+func (s *testSavedSlateStore) ListForUser(ctx context.Context, userID string) ([]savedslate.Item, error) {
+	if s.items == nil {
+		return []savedslate.Item{}, nil
+	}
+	items := s.items[userID]
+	if items == nil {
+		return []savedslate.Item{}, nil
+	}
+	return items, nil
+}
+
+func (s *testSavedSlateStore) UpsertForUser(ctx context.Context, userID string, endorsementID string) (savedslate.Item, error) {
+	s.lastUserID = userID
+	s.lastEndorsementID = endorsementID
+	if s.invalidEndorsements[endorsementID] {
+		return savedslate.Item{}, savedslate.ErrInvalidReference
+	}
+	if s.items == nil {
+		s.items = make(map[string][]savedslate.Item)
+	}
+	item := savedslate.Item{ID: "item-" + endorsementID, UserID: userID, EndorsementID: endorsementID, CreatedAt: time.Now().UTC(), UpdatedAt: time.Now().UTC()}
+	for i, existing := range s.items[userID] {
+		if existing.EndorsementID == endorsementID {
+			s.items[userID][i] = item
+			return item, nil
+		}
+	}
+	s.items[userID] = append(s.items[userID], item)
+	return item, nil
+}
+
+func (s *testSavedSlateStore) DeleteForUser(ctx context.Context, userID string, itemID string) error {
+	items := s.items[userID]
+	for i, item := range items {
+		if item.ID == itemID {
+			s.items[userID] = append(items[:i], items[i+1:]...)
+			return nil
+		}
+	}
+	return sql.ErrNoRows
 }
 
 func (s *testAdminStore) ListChapterDrafts(ctx context.Context) ([]admin.ChapterDraft, error) {

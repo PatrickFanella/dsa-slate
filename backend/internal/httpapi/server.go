@@ -14,6 +14,7 @@ import (
 	"git.subcult.tv/subculture-collective/dsa-slate/internal/auth"
 	"git.subcult.tv/subculture-collective/dsa-slate/internal/civic"
 	"git.subcult.tv/subculture-collective/dsa-slate/internal/directory"
+	"git.subcult.tv/subculture-collective/dsa-slate/internal/savedslate"
 )
 
 type Server struct {
@@ -21,6 +22,7 @@ type Server struct {
 	authStore    auth.Store
 	googleAuth   auth.GoogleSignInService
 	adminStore   admin.Store
+	slateStore   savedslate.Store
 	adminToken   string
 	civicService civic.LookupService
 }
@@ -32,26 +34,27 @@ func NewServer(store directory.Store) http.Handler {
 
 // NewServerWithAuth creates a server with auth session resolution enabled.
 func NewServerWithAuth(store directory.Store, authStore auth.Store) http.Handler {
-	return NewServerWithAuthAndServices(store, authStore, nil, nil, "", nil)
+	return NewServerWithAuthAndServices(store, authStore, nil, nil, nil, "", nil)
 }
 
 // NewServerWithAdmin creates a server with admin routes enabled.
 func NewServerWithAdmin(store directory.Store, adminStore admin.Store, adminToken string) http.Handler {
-	return NewServerWithAuthAndServices(store, nil, nil, adminStore, adminToken, nil)
+	return NewServerWithAuthAndServices(store, nil, nil, adminStore, nil, adminToken, nil)
 }
 
 // NewServerWithServices creates a server with admin and civic dependencies.
 func NewServerWithServices(store directory.Store, adminStore admin.Store, adminToken string, civicService civic.LookupService) http.Handler {
-	return NewServerWithAuthAndServices(store, nil, nil, adminStore, adminToken, civicService)
+	return NewServerWithAuthAndServices(store, nil, nil, adminStore, nil, adminToken, civicService)
 }
 
-// NewServerWithAuthAndServices creates a server with auth, admin, and civic dependencies.
-func NewServerWithAuthAndServices(store directory.Store, authStore auth.Store, googleAuth auth.GoogleSignInService, adminStore admin.Store, adminToken string, civicService civic.LookupService) http.Handler {
+// NewServerWithAuthAndServices creates a server with auth, admin, saved slate, and civic dependencies.
+func NewServerWithAuthAndServices(store directory.Store, authStore auth.Store, googleAuth auth.GoogleSignInService, adminStore admin.Store, slateStore savedslate.Store, adminToken string, civicService civic.LookupService) http.Handler {
 	return &Server{
 		store:        store,
 		authStore:    authStore,
 		googleAuth:   googleAuth,
 		adminStore:   adminStore,
+		slateStore:   slateStore,
 		adminToken:   strings.TrimSpace(adminToken),
 		civicService: civicService,
 	}
@@ -149,6 +152,18 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		s.authLogout(w, r)
+	case "/api/me/slate":
+		if r.Method != http.MethodGet {
+			s.methodNotAllowedAllow(w, http.MethodGet)
+			return
+		}
+		s.savedSlate(w, r)
+	case "/api/me/slate/items":
+		if r.Method != http.MethodPut {
+			s.methodNotAllowedAllow(w, http.MethodPut)
+			return
+		}
+		s.savedSlateItemCollection(w, r)
 	case "/api/civic/elections":
 		if r.Method != http.MethodGet {
 			s.methodNotAllowedAllow(w, http.MethodGet)
@@ -156,6 +171,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		s.civicElections(w, r)
 	default:
+		if strings.HasPrefix(r.URL.Path, "/api/me/slate/items/") {
+			s.savedSlateItem(w, r)
+			return
+		}
 		if strings.HasPrefix(r.URL.Path, "/api/admin/") {
 			s.handleAdmin(w, r)
 			return
@@ -401,6 +420,87 @@ func (s *Server) authLogout(w http.ResponseWriter, r *http.Request) {
 	s.writeJSON(w, http.StatusOK, auth.State{})
 }
 
+func (s *Server) savedSlate(w http.ResponseWriter, r *http.Request) {
+	if s.slateStore == nil {
+		s.notFound(w)
+		return
+	}
+	user, ok := s.requireUserAuth(w, r)
+	if !ok {
+		return
+	}
+	items, err := s.slateStore.ListForUser(r.Context(), user.ID)
+	if err != nil {
+		s.internalServerError(w)
+		return
+	}
+	s.writeJSON(w, http.StatusOK, savedslate.Slate{Items: items})
+}
+
+func (s *Server) savedSlateItemCollection(w http.ResponseWriter, r *http.Request) {
+	if s.slateStore == nil {
+		s.notFound(w)
+		return
+	}
+	user, ok := s.requireUserAuth(w, r)
+	if !ok {
+		return
+	}
+	request, ok := s.decodeSavedSlateItem(w, r)
+	if !ok {
+		return
+	}
+	item, err := s.slateStore.UpsertForUser(r.Context(), user.ID, request.EndorsementID)
+	if err != nil {
+		s.writeSavedSlateStoreError(w, err)
+		return
+	}
+	s.writeJSON(w, http.StatusOK, item)
+}
+
+func (s *Server) savedSlateItem(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		s.methodNotAllowedAllow(w, http.MethodDelete)
+		return
+	}
+	if s.slateStore == nil {
+		s.notFound(w)
+		return
+	}
+	user, ok := s.requireUserAuth(w, r)
+	if !ok {
+		return
+	}
+	itemID := strings.TrimPrefix(r.URL.Path, "/api/me/slate/items/")
+	if strings.TrimSpace(itemID) == "" || strings.Contains(itemID, "/") {
+		s.notFound(w)
+		return
+	}
+	if err := s.slateStore.DeleteForUser(r.Context(), user.ID, itemID); err != nil {
+		s.writeSavedSlateStoreError(w, err)
+		return
+	}
+	s.writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+type savedSlateItemRequest struct {
+	EndorsementID string `json:"endorsementId"`
+}
+
+func (s *Server) decodeSavedSlateItem(w http.ResponseWriter, r *http.Request) (savedSlateItemRequest, bool) {
+	var request savedSlateItemRequest
+	if err := decodeStrictJSON(r, &request); err != nil {
+		s.writeValidationFailed(w, []string{"invalid JSON body"})
+		return savedSlateItemRequest{}, false
+	}
+	request.EndorsementID = strings.TrimSpace(request.EndorsementID)
+	if request.EndorsementID == "" {
+		s.writeValidationFailed(w, []string{"endorsementId is required"})
+		return savedSlateItemRequest{}, false
+	}
+	return request, true
+}
+
 func (s *Server) decodeCivicLookup(w http.ResponseWriter, r *http.Request) (civic.LookupRequest, bool) {
 	var request civic.LookupRequest
 	if err := decodeStrictJSON(r, &request); err != nil {
@@ -411,11 +511,12 @@ func (s *Server) decodeCivicLookup(w http.ResponseWriter, r *http.Request) (civi
 }
 
 func (s *Server) handleAdmin(w http.ResponseWriter, r *http.Request) {
-	if s.adminStore == nil || s.adminToken == "" {
+	if s.adminStore == nil {
 		s.notFound(w)
 		return
 	}
-	if !s.requireAdminAuth(w, r) {
+	actor, ok := s.requireAdminAuth(w, r)
+	if !ok {
 		return
 	}
 
@@ -427,41 +528,41 @@ func (s *Server) handleAdmin(w http.ResponseWriter, r *http.Request) {
 
 	switch parts[0] {
 	case "chapter-drafts":
-		s.handleChapterDraftRoute(w, r, parts)
+		s.handleChapterDraftRoute(w, r, parts, actor)
 	case "endorsement-drafts":
-		s.handleEndorsementDraftRoute(w, r, parts)
+		s.handleEndorsementDraftRoute(w, r, parts, actor)
 	default:
 		s.notFound(w)
 	}
 }
 
-func (s *Server) handleChapterDraftRoute(w http.ResponseWriter, r *http.Request, parts []string) {
+func (s *Server) handleChapterDraftRoute(w http.ResponseWriter, r *http.Request, parts []string, actor string) {
 	switch len(parts) {
 	case 1:
-		s.handleChapterDraftCollection(w, r)
+		s.handleChapterDraftCollection(w, r, actor)
 	case 2:
-		s.handleChapterDraftItem(w, r, parts[1])
+		s.handleChapterDraftItem(w, r, parts[1], actor)
 	case 3:
-		s.handleChapterDraftAction(w, r, parts[1], parts[2])
+		s.handleChapterDraftAction(w, r, parts[1], parts[2], actor)
 	default:
 		s.notFound(w)
 	}
 }
 
-func (s *Server) handleEndorsementDraftRoute(w http.ResponseWriter, r *http.Request, parts []string) {
+func (s *Server) handleEndorsementDraftRoute(w http.ResponseWriter, r *http.Request, parts []string, actor string) {
 	switch len(parts) {
 	case 1:
-		s.handleEndorsementDraftCollection(w, r)
+		s.handleEndorsementDraftCollection(w, r, actor)
 	case 2:
-		s.handleEndorsementDraftItem(w, r, parts[1])
+		s.handleEndorsementDraftItem(w, r, parts[1], actor)
 	case 3:
-		s.handleEndorsementDraftAction(w, r, parts[1], parts[2])
+		s.handleEndorsementDraftAction(w, r, parts[1], parts[2], actor)
 	default:
 		s.notFound(w)
 	}
 }
 
-func (s *Server) handleChapterDraftCollection(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleChapterDraftCollection(w http.ResponseWriter, r *http.Request, actor string) {
 	switch r.Method {
 	case http.MethodGet:
 		drafts, err := s.adminStore.ListChapterDrafts(r.Context())
@@ -479,7 +580,7 @@ func (s *Server) handleChapterDraftCollection(w http.ResponseWriter, r *http.Req
 			s.writeValidationFailed(w, errs)
 			return
 		}
-		saved, err := s.adminStore.UpsertChapterDraft(r.Context(), draft, s.adminActor())
+		saved, err := s.adminStore.UpsertChapterDraft(r.Context(), draft, actor)
 		if err != nil {
 			s.writeAdminStoreError(w, err)
 			return
@@ -490,7 +591,7 @@ func (s *Server) handleChapterDraftCollection(w http.ResponseWriter, r *http.Req
 	}
 }
 
-func (s *Server) handleChapterDraftItem(w http.ResponseWriter, r *http.Request, id string) {
+func (s *Server) handleChapterDraftItem(w http.ResponseWriter, r *http.Request, id string, actor string) {
 	id = strings.TrimSpace(id)
 	if id == "" {
 		s.notFound(w)
@@ -523,7 +624,7 @@ func (s *Server) handleChapterDraftItem(w http.ResponseWriter, r *http.Request, 
 			s.writeValidationFailed(w, errs)
 			return
 		}
-		saved, err := s.adminStore.UpsertChapterDraft(r.Context(), draft, s.adminActor())
+		saved, err := s.adminStore.UpsertChapterDraft(r.Context(), draft, actor)
 		if err != nil {
 			s.writeAdminStoreError(w, err)
 			return
@@ -534,7 +635,7 @@ func (s *Server) handleChapterDraftItem(w http.ResponseWriter, r *http.Request, 
 	}
 }
 
-func (s *Server) handleChapterDraftAction(w http.ResponseWriter, r *http.Request, id string, action string) {
+func (s *Server) handleChapterDraftAction(w http.ResponseWriter, r *http.Request, id string, action string, actor string) {
 	id = strings.TrimSpace(id)
 	if id == "" || r.Method != http.MethodPost {
 		s.methodNotAllowedAllow(w, http.MethodPost)
@@ -543,13 +644,13 @@ func (s *Server) handleChapterDraftAction(w http.ResponseWriter, r *http.Request
 
 	switch action {
 	case "publish":
-		if err := s.adminStore.PublishChapterDraft(r.Context(), id, s.adminActor()); err != nil {
+		if err := s.adminStore.PublishChapterDraft(r.Context(), id, actor); err != nil {
 			s.writeAdminStoreError(w, err)
 			return
 		}
 		s.writeJSON(w, http.StatusOK, map[string]string{"status": "published"})
 	case "archive":
-		if err := s.adminStore.ArchiveChapterDraft(r.Context(), id, s.adminActor()); err != nil {
+		if err := s.adminStore.ArchiveChapterDraft(r.Context(), id, actor); err != nil {
 			s.writeAdminStoreError(w, err)
 			return
 		}
@@ -559,7 +660,7 @@ func (s *Server) handleChapterDraftAction(w http.ResponseWriter, r *http.Request
 	}
 }
 
-func (s *Server) handleEndorsementDraftCollection(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleEndorsementDraftCollection(w http.ResponseWriter, r *http.Request, actor string) {
 	switch r.Method {
 	case http.MethodGet:
 		drafts, err := s.adminStore.ListEndorsementDrafts(r.Context())
@@ -577,7 +678,7 @@ func (s *Server) handleEndorsementDraftCollection(w http.ResponseWriter, r *http
 			s.writeValidationFailed(w, errs)
 			return
 		}
-		saved, err := s.adminStore.UpsertEndorsementDraft(r.Context(), draft, s.adminActor())
+		saved, err := s.adminStore.UpsertEndorsementDraft(r.Context(), draft, actor)
 		if err != nil {
 			s.writeAdminStoreError(w, err)
 			return
@@ -588,7 +689,7 @@ func (s *Server) handleEndorsementDraftCollection(w http.ResponseWriter, r *http
 	}
 }
 
-func (s *Server) handleEndorsementDraftItem(w http.ResponseWriter, r *http.Request, id string) {
+func (s *Server) handleEndorsementDraftItem(w http.ResponseWriter, r *http.Request, id string, actor string) {
 	id = strings.TrimSpace(id)
 	if id == "" {
 		s.notFound(w)
@@ -621,7 +722,7 @@ func (s *Server) handleEndorsementDraftItem(w http.ResponseWriter, r *http.Reque
 			s.writeValidationFailed(w, errs)
 			return
 		}
-		saved, err := s.adminStore.UpsertEndorsementDraft(r.Context(), draft, s.adminActor())
+		saved, err := s.adminStore.UpsertEndorsementDraft(r.Context(), draft, actor)
 		if err != nil {
 			s.writeAdminStoreError(w, err)
 			return
@@ -632,7 +733,7 @@ func (s *Server) handleEndorsementDraftItem(w http.ResponseWriter, r *http.Reque
 	}
 }
 
-func (s *Server) handleEndorsementDraftAction(w http.ResponseWriter, r *http.Request, id string, action string) {
+func (s *Server) handleEndorsementDraftAction(w http.ResponseWriter, r *http.Request, id string, action string, actor string) {
 	id = strings.TrimSpace(id)
 	if id == "" || r.Method != http.MethodPost {
 		s.methodNotAllowedAllow(w, http.MethodPost)
@@ -641,13 +742,13 @@ func (s *Server) handleEndorsementDraftAction(w http.ResponseWriter, r *http.Req
 
 	switch action {
 	case "publish":
-		if err := s.adminStore.PublishEndorsementDraft(r.Context(), id, s.adminActor()); err != nil {
+		if err := s.adminStore.PublishEndorsementDraft(r.Context(), id, actor); err != nil {
 			s.writeAdminStoreError(w, err)
 			return
 		}
 		s.writeJSON(w, http.StatusOK, map[string]string{"status": "published"})
 	case "archive":
-		if err := s.adminStore.ArchiveEndorsementDraft(r.Context(), id, s.adminActor()); err != nil {
+		if err := s.adminStore.ArchiveEndorsementDraft(r.Context(), id, actor); err != nil {
 			s.writeAdminStoreError(w, err)
 			return
 		}
@@ -692,22 +793,76 @@ func splitPath(path string) []string {
 	return strings.Split(trimmed, "/")
 }
 
-func (s *Server) requireAdminAuth(w http.ResponseWriter, r *http.Request) bool {
+func (s *Server) requireUserAuth(w http.ResponseWriter, r *http.Request) (*auth.Summary, bool) {
+	if s.authStore == nil {
+		s.unauthorized(w)
+		return nil, false
+	}
+	cookie, err := r.Cookie(auth.SessionCookieName)
+	if err != nil || strings.TrimSpace(cookie.Value) == "" {
+		s.unauthorized(w)
+		return nil, false
+	}
+	state, err := auth.ResolveState(r.Context(), s.authStore, cookie.Value, timeNow())
+	if err != nil {
+		s.internalServerError(w)
+		return nil, false
+	}
+	if !state.Authenticated || state.User == nil || strings.TrimSpace(state.User.ID) == "" {
+		s.unauthorized(w)
+		return nil, false
+	}
+	return state.User, true
+}
+
+func (s *Server) requireAdminAuth(w http.ResponseWriter, r *http.Request) (string, bool) {
+	if s.authStore != nil {
+		cookie, err := r.Cookie(auth.SessionCookieName)
+		if err != nil || strings.TrimSpace(cookie.Value) == "" {
+			s.unauthorized(w)
+			return "", false
+		}
+
+		state, err := auth.ResolveState(r.Context(), s.authStore, cookie.Value, timeNow())
+		if err != nil {
+			s.internalServerError(w)
+			return "", false
+		}
+		if !state.Authenticated || state.User == nil {
+			s.unauthorized(w)
+			return "", false
+		}
+		if state.User.Role != auth.RoleEditor && state.User.Role != auth.RoleAdmin {
+			s.forbidden(w)
+			return "", false
+		}
+		return authActor(state.User), true
+	}
+
 	header := strings.TrimSpace(r.Header.Get("Authorization"))
 	const prefix = "Bearer "
-	if !strings.HasPrefix(header, prefix) {
+	if s.adminToken == "" || !strings.HasPrefix(header, prefix) {
 		s.unauthorized(w)
-		return false
+		return "", false
 	}
 	if strings.TrimSpace(strings.TrimPrefix(header, prefix)) != s.adminToken {
 		s.unauthorized(w)
-		return false
+		return "", false
 	}
-	return true
+	return "admin-token", true
 }
 
-func (s *Server) adminActor() string {
-	return "admin"
+func authActor(user *auth.Summary) string {
+	if user == nil {
+		return "unknown"
+	}
+	if email := strings.TrimSpace(user.Email); email != "" {
+		return email
+	}
+	if id := strings.TrimSpace(user.ID); id != "" {
+		return id
+	}
+	return "unknown"
 }
 
 func (s *Server) writeValidationFailed(w http.ResponseWriter, messages []string) {
@@ -721,6 +876,10 @@ func (s *Server) unauthorized(w http.ResponseWriter) {
 	s.writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 }
 
+func (s *Server) forbidden(w http.ResponseWriter) {
+	s.writeJSON(w, http.StatusForbidden, map[string]string{"error": "forbidden", "message": "editor or admin role required"})
+}
+
 func (s *Server) writeAdminStoreError(w http.ResponseWriter, err error) {
 	var validationErr admin.ValidationError
 	if errors.As(err, &validationErr) {
@@ -732,6 +891,18 @@ func (s *Server) writeAdminStoreError(w http.ResponseWriter, err error) {
 		return
 	}
 	if strings.EqualFold(err.Error(), "not found") {
+		s.notFound(w)
+		return
+	}
+	s.internalServerError(w)
+}
+
+func (s *Server) writeSavedSlateStoreError(w http.ResponseWriter, err error) {
+	if errors.Is(err, savedslate.ErrInvalidReference) {
+		s.writeValidationFailed(w, []string{"endorsementId must reference an existing endorsement"})
+		return
+	}
+	if errors.Is(err, sql.ErrNoRows) {
 		s.notFound(w)
 		return
 	}

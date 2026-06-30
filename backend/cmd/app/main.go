@@ -12,6 +12,7 @@ import (
 	"git.subcult.tv/subculture-collective/dsa-slate/internal/civic"
 	"git.subcult.tv/subculture-collective/dsa-slate/internal/directory"
 	"git.subcult.tv/subculture-collective/dsa-slate/internal/httpapi"
+	"git.subcult.tv/subculture-collective/dsa-slate/internal/savedslate"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -49,10 +50,6 @@ func main() {
 	if clientID, clientSecret := appcfg.GoogleOAuthClientID(), appcfg.GoogleOAuthClientSecret(); clientID != "" && clientSecret != "" {
 		googleAuth = auth.NewGoogleSignInService(authStore, auth.NewGoogleOAuthConfig(clientID, clientSecret, appcfg.GoogleOAuthRedirectURL(), appcfg.AppBaseURL()), nil)
 	}
-	if adminToken != "" {
-		handler = httpapi.NewServerWithAuthAndServices(directory.NewPostgresStore(pool), authStore, googleAuth, admin.NewPostgresStore(pool), adminToken, civicService)
-	} else {
-		handler = httpapi.NewServerWithAuthAndServices(directory.NewPostgresStore(pool), authStore, googleAuth, nil, "", civicService)
-	}
+	handler = httpapi.NewServerWithAuthAndServices(directory.NewPostgresStore(pool), authStore, googleAuth, admin.NewPostgresStore(pool), savedslate.NewPostgresStore(pool), adminToken, civicService)
 	log.Fatal(http.ListenAndServe(":"+port, handler))
 }

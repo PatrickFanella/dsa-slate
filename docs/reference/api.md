@@ -1,6 +1,6 @@
 # DSA Slate API
 
-The public API is read-only JSON for source-linked electoral guide data. Admin draft endpoints are token-protected and local-only.
+The public API is read-only JSON for source-linked electoral guide data. Admin draft endpoints are session-gated for authenticated editors/admins and local/editorial-only.
 
 Private-alpha session foundation is implemented via `GET /api/auth/session` and the HTTP-only `dsa_slate_session` cookie name. Google OIDC sign-in now sits on top of that session model.
 
@@ -83,16 +83,35 @@ See `docs/reference/civic-api.md` for the privacy and response contract.
 - Clears the `dsa_slate_session` cookie.
 - Returns `{authenticated:false}`.
 
-## Admin draft endpoints
+## Saved slate endpoints
 
-All admin endpoints require:
+Saved slate endpoints require a valid `dsa_slate_session` cookie for any authenticated user. They store references to public endorsements; they do not store raw voter addresses.
 
-```http
-Authorization: Bearer <ADMIN_API_TOKEN>
+`GET /api/me/slate`
+
+- Returns the current user's saved endorsement items:
+
+```json
+{"items":[{"id":"ssi_...","userId":"user-1","endorsementId":"endorsement-1","createdAt":"2026-06-30T00:00:00Z","updatedAt":"2026-06-30T00:00:00Z"}]}
 ```
 
-They are intended for local/editorial use only and operate on draft records before publishing into the public read tables.
-The frontend draft console is available at `/admin` and should be used with a session-only bearer token from `ADMIN_API_TOKEN`.
+`PUT /api/me/slate/items`
+
+- Body: `{"endorsementId":"<public endorsement id>"}`
+- Creates the saved item or refreshes the existing item for that user and endorsement.
+- Returns the saved item.
+
+`DELETE /api/me/slate/items/{id}`
+
+- Deletes only the current user's saved item.
+- Returns `{"ok":true}` when deleted.
+- Returns `404` when the item does not exist or belongs to another user.
+
+## Admin draft endpoints
+
+All admin endpoints require a valid `dsa_slate_session` cookie for a user with role `editor` or `admin`.
+
+They are intended for local/editorial use only and operate on draft records before publishing into the public read tables. The frontend draft console is available at `/admin` and uses the signed-in session; it does not collect or send bearer tokens from the browser. `ADMIN_API_TOKEN` remains only as a temporary local/server fallback when an auth store is not wired.
 
 - `GET /api/admin/chapter-drafts`
 - `POST /api/admin/chapter-drafts`
@@ -111,6 +130,12 @@ Unauthorized requests return:
 
 ```json
 {"error":"unauthorized"}
+```
+
+Authenticated users without `editor` or `admin` role return:
+
+```json
+{"error":"forbidden","message":"editor or admin role required"}
 ```
 
 Validation errors return:

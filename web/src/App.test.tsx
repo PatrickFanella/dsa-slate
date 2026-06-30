@@ -41,17 +41,13 @@ describe('App', () => {
 
       expect(html).toContain('DSA Slate Admin');
       expect(html).toContain('Editorial draft console');
-      expect(html).toContain('Token-protected local drafting');
-      expect(html).toContain('Admin bearer token');
-      expect(html).toContain('type="password"');
-      expect(html).toContain('Chapter drafts');
-      expect(html).toContain('Endorsement drafts');
-      expect(html).toContain('Save draft');
-      expect(html).toContain('List drafts');
-      expect(html).toContain('Load by ID');
-      expect(html).toContain('Publish');
-      expect(html).toContain('Archive');
-      expect(html).toContain('Authorization: Bearer &lt;token&gt;');
+      expect(html).toContain('Authenticated drafting');
+      expect(html).toContain('Signed-in session');
+      expect(html).toContain('Checking signed-in editor session');
+      expect(html).toContain('Editor or admin role is required');
+      expect(html).not.toContain('Admin bearer token');
+      expect(html).not.toContain('type="password"');
+      expect(html).not.toContain('Authorization: Bearer');
       expect(html).toContain('not a public submission form');
       expect(html).not.toContain('Find your DSA slate');
     } finally {

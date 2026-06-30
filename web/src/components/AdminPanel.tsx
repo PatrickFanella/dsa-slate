@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useMemo,
   useState,
   type FormEvent,
@@ -29,6 +30,7 @@ import {
   type AdminEndorsementDraft,
   type AdminEndorsementDraftForm,
 } from '../data/adminApi';
+import { fetchAuthSession, type AuthState } from '../data/authApi';
 import { confidenceLabel, confidenceLevels, endorsementTypeLabel, endorsementTypes } from '../data/schema';
 
 type Notice = {
@@ -205,13 +207,14 @@ function SectionShell({ title, description, children }: { title: string; descrip
 }
 
 export function AdminPanel() {
-  const [token, setToken] = useState('');
+  const [authState, setAuthState] = useState<AuthState>({ authenticated: false });
+  const [authLoading, setAuthLoading] = useState(true);
   const [notice, setNotice] = useState<Notice>({
     kind: 'info',
-    title: 'Token-protected editorial drafting',
+    title: 'Private alpha editorial drafting',
     messages: [
-      'Open this page at /admin for local editorial drafting only.',
-      'The bearer token is kept in memory, sent as Authorization: Bearer <token>, and not stored in localStorage.',
+      'Open this page at /admin for authenticated editorial drafting only.',
+      'Editor or admin role is required. Requests use the signed-in session cookie.',
       'This UI is not a public submission form.',
     ],
   });
@@ -219,6 +222,35 @@ export function AdminPanel() {
   const [endorsementDraft, setEndorsementDraft] = useState<AdminEndorsementDraftForm>(() => emptyAdminEndorsementDraftForm());
   const [chapterDrafts, setChapterDrafts] = useState<AdminChapterDraft[]>([]);
   const [endorsementDrafts, setEndorsementDrafts] = useState<AdminEndorsementDraft[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetchAuthSession()
+      .then((state) => {
+        if (!cancelled) {
+          setAuthState(state);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setNotice(errorToNotice(error));
+          setAuthState({ authenticated: false });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setAuthLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const signedInUser = authState.user;
+  const canUseAdmin = Boolean(signedInUser && (signedInUser.role === 'editor' || signedInUser.role === 'admin'));
 
   const chapterStatusOptions = useMemo(
     () =>
@@ -251,8 +283,8 @@ export function AdminPanel() {
   );
 
   async function runAction(action: () => Promise<void>, successTitle: string) {
-    if (!token.trim()) {
-      setNotice({ kind: 'error', title: 'Token required', messages: ['Enter the admin bearer token before making requests.'] });
+    if (!canUseAdmin) {
+      setNotice({ kind: 'error', title: 'Editor or admin role required', messages: ['Sign in with an editor or admin account before making admin requests.'] });
       return;
     }
 
@@ -279,34 +311,21 @@ export function AdminPanel() {
           <p className="text-sm font-black uppercase tracking-[0.28em] text-primary">DSA Slate Admin</p>
           <h1 className="mt-4 font-display text-4xl font-black tracking-tight text-foreground md:text-6xl">Editorial draft console</h1>
           <p className="mt-5 max-w-3xl text-lg leading-8 text-muted">
-            Token-protected local drafting for chapter and endorsement records. This page is for editorial work only;
+            Authenticated drafting for chapter and endorsement records. This page is for editorial work only;
             it does not accept public submissions.
           </p>
 
-          <div className="mt-8 grid gap-4 rounded-none border-2 border-border bg-surface-muted p-4 md:grid-cols-[1fr_auto] md:items-end">
-            <FieldShell htmlFor="admin-token" label="Admin bearer token" hint="Not persisted. Kept in session memory only.">
-              <TextInput
-                id="admin-token"
-                autoComplete="off"
-                onChange={(event) => setToken(event.target.value)}
-                placeholder="ADMIN_API_TOKEN"
-                type="password"
-                value={token}
-              />
-            </FieldShell>
-            <button
-              className="rounded-none border-2 border-primary bg-primary px-6 py-3 font-black text-primary-foreground transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              type="button"
-              onClick={() =>
-                setNotice({
-                  kind: 'info',
-                  title: 'Token copied into memory',
-                  messages: ['Requests will send Authorization: Bearer <token> for this session.'],
-                })
-              }
-            >
-              Use token
-            </button>
+          <div className="mt-8 rounded-none border-2 border-border bg-surface-muted p-4">
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-primary">Signed-in session</p>
+            {authLoading ? (
+              <p className="mt-2 text-sm leading-6 text-muted">Checking signed-in editor session…</p>
+            ) : signedInUser ? (
+              <p className="mt-2 text-sm leading-6 text-foreground">
+                {signedInUser.email} · <span className="font-black uppercase tracking-[0.18em] text-primary">{signedInUser.role}</span>
+              </p>
+            ) : (
+              <p className="mt-2 text-sm leading-6 text-muted">Not signed in. Use Google sign-in before opening the admin console.</p>
+            )}
           </div>
 
           <div className="mt-4">
@@ -314,7 +333,26 @@ export function AdminPanel() {
           </div>
         </header>
 
-        <section className="grid gap-6 lg:grid-cols-2">
+        {!authLoading && !canUseAdmin ? (
+          <section className="rounded-none border-2 border-border-strong bg-surface p-6 shadow-[8px_8px_0_var(--theme-shadow)] md:p-8">
+            <h2 className="text-2xl font-black text-foreground">Editor or admin role required</h2>
+            <p className="mt-3 text-sm leading-6 text-muted">
+              {signedInUser
+                ? `Signed in as ${signedInUser.email} with role ${signedInUser.role}. Ask an admin to grant editor access for private alpha drafting.`
+                : 'Sign in with an editor or admin account to use the private alpha admin workflow.'}
+            </p>
+            {!signedInUser ? (
+              <a
+                className="mt-5 inline-flex rounded-none border-2 border-primary bg-primary px-5 py-3 font-black text-primary-foreground transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                href="/api/auth/google/start"
+              >
+                Sign in with Google
+              </a>
+            ) : null}
+          </section>
+        ) : null}
+
+        {canUseAdmin ? <section className="grid gap-6 lg:grid-cols-2">
           <SectionShell
             description="Draft chapter records before they are published to the public read tables."
             title="Chapter drafts"
@@ -327,7 +365,7 @@ export function AdminPanel() {
                   if (!chapterDraft.id.trim()) {
                     throw new Error('Enter a chapter draft ID before saving.');
                   }
-                  const saved = await saveAdminChapterDraft(token, chapterDraft);
+                  const saved = await saveAdminChapterDraft(chapterDraft);
                   setChapterDraft(adminChapterDraftToForm(saved));
                   setChapterDrafts((current) => {
                     const next = current.filter((draft) => draft.id !== saved.id);
@@ -425,7 +463,7 @@ export function AdminPanel() {
                   type="button"
                   onClick={async () =>
                     runAction(async () => {
-                      const drafts = await listAdminChapterDrafts(token);
+                      const drafts = await listAdminChapterDrafts();
                       setChapterDrafts(drafts);
                     }, 'Chapter drafts loaded')
                   }
@@ -440,7 +478,7 @@ export function AdminPanel() {
                       if (!chapterDraft.id.trim()) {
                         throw new Error('Enter a chapter draft ID before loading it.');
                       }
-                      const draft = await loadAdminChapterDraft(token, chapterDraft.id);
+                      const draft = await loadAdminChapterDraft(chapterDraft.id);
                       resetChapterDraftFromResponse(draft);
                     }, 'Chapter draft loaded')
                   }
@@ -458,16 +496,16 @@ export function AdminPanel() {
                     key={draft.id}
                     onArchive={async () =>
                       runAction(async () => {
-                        await archiveAdminChapterDraft(token, draft.id);
-                        const refreshed = await listAdminChapterDrafts(token);
+                        await archiveAdminChapterDraft(draft.id);
+                        const refreshed = await listAdminChapterDrafts();
                         setChapterDrafts(refreshed);
                       }, 'Chapter draft archived')
                     }
                     onLoad={() => resetChapterDraftFromResponse(draft)}
                     onPublish={async () =>
                       runAction(async () => {
-                        await publishAdminChapterDraft(token, draft.id);
-                        const refreshed = await listAdminChapterDrafts(token);
+                        await publishAdminChapterDraft(draft.id);
+                        const refreshed = await listAdminChapterDrafts();
                         setChapterDrafts(refreshed);
                       }, 'Chapter draft published')
                     }
@@ -482,7 +520,7 @@ export function AdminPanel() {
           </SectionShell>
 
           <SectionShell
-            description="Draft endorsement records against the token-protected editorial API."
+            description="Draft endorsement records against the authenticated editorial API."
             title="Endorsement drafts"
           >
             <form
@@ -493,7 +531,7 @@ export function AdminPanel() {
                   if (!endorsementDraft.id.trim()) {
                     throw new Error('Enter an endorsement draft ID before saving.');
                   }
-                  const saved = await saveAdminEndorsementDraft(token, endorsementDraft);
+                  const saved = await saveAdminEndorsementDraft(endorsementDraft);
                   setEndorsementDraft(adminEndorsementDraftToForm(saved));
                   setEndorsementDrafts((current) => {
                     const next = current.filter((draft) => draft.id !== saved.id);
@@ -629,7 +667,7 @@ export function AdminPanel() {
                   type="button"
                   onClick={async () =>
                     runAction(async () => {
-                      const drafts = await listAdminEndorsementDrafts(token);
+                      const drafts = await listAdminEndorsementDrafts();
                       setEndorsementDrafts(drafts);
                     }, 'Endorsement drafts loaded')
                   }
@@ -644,7 +682,7 @@ export function AdminPanel() {
                       if (!endorsementDraft.id.trim()) {
                         throw new Error('Enter an endorsement draft ID before loading it.');
                       }
-                      const draft = await loadAdminEndorsementDraft(token, endorsementDraft.id);
+                      const draft = await loadAdminEndorsementDraft(endorsementDraft.id);
                       resetEndorsementDraftFromResponse(draft);
                     }, 'Endorsement draft loaded')
                   }
@@ -662,16 +700,16 @@ export function AdminPanel() {
                     key={draft.id}
                     onArchive={async () =>
                       runAction(async () => {
-                        await archiveAdminEndorsementDraft(token, draft.id);
-                        const refreshed = await listAdminEndorsementDrafts(token);
+                        await archiveAdminEndorsementDraft(draft.id);
+                        const refreshed = await listAdminEndorsementDrafts();
                         setEndorsementDrafts(refreshed);
                       }, 'Endorsement draft archived')
                     }
                     onLoad={() => resetEndorsementDraftFromResponse(draft)}
                     onPublish={async () =>
                       runAction(async () => {
-                        await publishAdminEndorsementDraft(token, draft.id);
-                        const refreshed = await listAdminEndorsementDrafts(token);
+                        await publishAdminEndorsementDraft(draft.id);
+                        const refreshed = await listAdminEndorsementDrafts();
                         setEndorsementDrafts(refreshed);
                       }, 'Endorsement draft published')
                     }
@@ -684,7 +722,7 @@ export function AdminPanel() {
               </p>
             )}
           </SectionShell>
-        </section>
+        </section> : null}
       </section>
     </main>
   );

@@ -89,9 +89,9 @@ The report fails on missing source URLs for public voter-guide, endorsement, and
 
 ## Admin draft workflow
 
-The reviewed draft workflow uses token-protected admin endpoints with `ADMIN_API_TOKEN`.
+The reviewed draft workflow uses session-gated admin endpoints. Editors and admins must sign in before using `/admin`; the browser UI does not collect or send `ADMIN_API_TOKEN`. That token remains only as a temporary local/server fallback when an auth store is not wired.
 
 - Drafts live in separate admin tables until published.
 - Publish copies reviewed drafts into the public read tables.
 - Archive marks drafts inactive without deleting history.
-- No public submissions, user accounts, OAuth, or raw voter addresses are part of this slice.
+- No public submissions or raw voter addresses are part of this slice.
