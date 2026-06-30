@@ -94,10 +94,6 @@ Response shape:
 
 Do not include the full submitted address in the response unless the user needs to confirm it in the same request flow. Never write it to database-backed user or audit records in the anonymous phase.
 
-## Supported elections
-
-`GET /api/civic/elections` lists elections currently supported by Google Civic. The public lookup panel uses this endpoint to populate the election dropdown. Selecting one sends its Google `electionId` with the address lookup and can avoid `Election unknown` responses when Google cannot infer an election from address alone.
-
 ## Environment variables
 
 ```env

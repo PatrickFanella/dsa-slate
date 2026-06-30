@@ -63,6 +63,8 @@ Admin draft endpoints are token-protected and local-only; they are not public su
 Read API contract: `docs/reference/api.md`.
 Design reference: `docs/reference/design.md`.
 Civic API/privacy reference: `docs/reference/civic-api.md`.
+Private alpha PRD: `docs/product/private-alpha-prd.md`.
+Private alpha architecture: `docs/product/private-alpha-architecture.md`.
 The frontend uses official DSA palette tokens mapped into Tailwind v4 semantic utilities in `web/src/styles.css`.
 The public UI includes a light/dark theme toggle driven by `data-theme` on `document.documentElement`.
 
