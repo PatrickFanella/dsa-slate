@@ -79,9 +79,10 @@ dev-web: deps ## Start local Vite frontend dev server
 
 dev-api: db-up ## Run the Go backend locally against compose Postgres
 	@published_port="$$( $(COMPOSE) port postgres 5432 )"; \
+	if [ -f .env ]; then set -a; source .env; set +a; fi; \
 	postgres_port="$${published_port##*:}"; \
 	DATABASE_URL="$${DATABASE_URL:-postgres://$${POSTGRES_USER:-dsa_slate}:$${POSTGRES_PASSWORD:-change-me}@localhost:$${POSTGRES_PORT:-$${postgres_port:-5432}}/$${POSTGRES_DB:-dsa_slate}?sslmode=disable}"; \
-	export DATABASE_URL; \
+	export DATABASE_URL GOOGLE_CIVIC_API_KEY ADMIN_API_TOKEN; \
 	cd backend && go run ./cmd/app
 
 api-smoke: ## Curl the local API health and directory endpoints
