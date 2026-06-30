@@ -22,6 +22,7 @@ First trusted-directory slice:
 Out of scope for the first launch: address lookup, admin UI, public submissions, live election-night results, campaign coordination, address storage, and automated nationwide scraping.
 
 Editorial/admin writes use a local bearer token from `ADMIN_API_TOKEN` instead of user accounts or OAuth.
+Open the draft console at `/admin`; the browser session must supply that bearer token in memory for any draft requests.
 
 ## Stack
 

@@ -1,3 +1,4 @@
+import { AdminPanel } from './components/AdminPanel';
 import { DetailPanel } from './components/DetailPanel';
 import { EndorsementCard, MeasureCard, VoterGuideCard } from './components/DirectoryCard';
 import { MethodologyPanel } from './components/MethodologyPanel';
@@ -11,6 +12,10 @@ import { useEffect, useMemo, useState } from 'react';
 type ThemeMode = 'light' | 'dark';
 
 const THEME_STORAGE_KEY = 'dsa-slate-theme';
+
+function isAdminRoute(): boolean {
+  return typeof window !== 'undefined' && window.location.pathname === '/admin';
+}
 
 function readStoredTheme(): ThemeMode | null {
   try {
@@ -40,7 +45,7 @@ function getInitialTheme(): ThemeMode {
   return storedTheme ?? 'light';
 }
 
-export default function App() {
+function PublicHomePage() {
   const [query, setQuery] = useState('');
   const [chapterId, setChapterId] = useState('');
   const [electionId, setElectionId] = useState('');
@@ -302,6 +307,10 @@ export default function App() {
       </section>
     </main>
   );
+}
+
+export default function App() {
+  return isAdminRoute() ? <AdminPanel /> : <PublicHomePage />;
 }
 
 function DirectorySection({

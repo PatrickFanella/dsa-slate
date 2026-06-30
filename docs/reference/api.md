@@ -57,6 +57,7 @@ Authorization: Bearer <ADMIN_API_TOKEN>
 ```
 
 They are intended for local/editorial use only and operate on draft records before publishing into the public read tables.
+The frontend draft console is available at `/admin` and should be used with a session-only bearer token from `ADMIN_API_TOKEN`.
 
 - `GET /api/admin/chapter-drafts`
 - `POST /api/admin/chapter-drafts`

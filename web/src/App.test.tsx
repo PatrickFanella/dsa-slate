@@ -5,7 +5,60 @@ import { DetailPanel } from './components/DetailPanel';
 import { VoterGuideCard } from './components/DirectoryCard';
 import { getEndorsementCards, getMeasureCards, getVoterGuideCards } from './data';
 
+function setPathname(pathname: string): () => void {
+  const originalWindow = (globalThis as typeof globalThis & { window?: Window }).window;
+  const fakeWindow = {
+    location: { pathname },
+    history: { pushState: (_state: unknown, _title: string, nextPathname: string) => { fakeWindow.location.pathname = nextPathname; } },
+  } as typeof window;
+
+  Object.defineProperty(globalThis, 'window', {
+    configurable: true,
+    value: fakeWindow,
+    writable: true,
+  });
+
+  return () => {
+    if (originalWindow) {
+      Object.defineProperty(globalThis, 'window', {
+        configurable: true,
+        value: originalWindow,
+        writable: true,
+      });
+      return;
+    }
+
+    Reflect.deleteProperty(globalThis as typeof globalThis & { window?: Window }, 'window');
+  };
+}
+
 describe('App', () => {
+  it('renders the admin drafting console on /admin', () => {
+    const restore = setPathname('/admin');
+
+    try {
+      const html = renderToString(<App />);
+
+      expect(html).toContain('DSA Slate Admin');
+      expect(html).toContain('Editorial draft console');
+      expect(html).toContain('Token-protected local drafting');
+      expect(html).toContain('Admin bearer token');
+      expect(html).toContain('type="password"');
+      expect(html).toContain('Chapter drafts');
+      expect(html).toContain('Endorsement drafts');
+      expect(html).toContain('Save draft');
+      expect(html).toContain('List drafts');
+      expect(html).toContain('Load by ID');
+      expect(html).toContain('Publish');
+      expect(html).toContain('Archive');
+      expect(html).toContain('Authorization: Bearer &lt;token&gt;');
+      expect(html).toContain('not a public submission form');
+      expect(html).not.toContain('Find your DSA slate');
+    } finally {
+      restore();
+    }
+  });
+
   it('renders the source-linked directory homepage', () => {
     const html = renderToString(<App />);
 
