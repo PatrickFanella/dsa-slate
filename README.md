@@ -71,7 +71,7 @@ Recommended feature order: stabilize the read API and seed data first, then buil
 - Run `make data-quality` after seed edits to check source-linked records against local Postgres before proposing admin/write API work.
 - `make seed` loads the imported DSA chapter directory from `seeds/chapters.sql`, then applies California electoral records from `seeds/california.sql`; runtime code reads Postgres, not the original CSV import source.
 - Set `GOOGLE_CIVIC_API_KEY` in `.env` to enable anonymous `/api/civic/lookup`; `make dev-api` and Docker Compose pass it to the Go API without committing the key. The endpoint does not store raw addresses and does not confirm voter registration status.
-- The public homepage includes a Civic lookup panel for anonymous address-based election info; the submitted address stays in browser component state only.
+- The public homepage includes a Civic lookup panel with a supported-election dropdown for anonymous address-based election info; the submitted address stays in browser component state only.
 
 ## Open Pilot
 

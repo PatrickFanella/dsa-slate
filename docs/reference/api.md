@@ -43,6 +43,7 @@ All empty collections are JSON arrays, not `null`.
 - `GET /api/endorsements?chapterId=<id>&electionId=<id>&raceId=<id>`
 - `GET /api/ballot-measures?electionId=<id>`
 - `GET /api/measure-positions?chapterId=<id>&measureId=<id>`
+- `GET /api/civic/elections` — lists Google Civic-supported elections when `GOOGLE_CIVIC_API_KEY` is configured.
 
 ## Anonymous Civic lookup endpoint
 
@@ -96,7 +97,7 @@ Validation errors return:
 {"error":"invalid_query","message":"level must be one of federal, statewide, state_legislature, local, unknown"}
 ```
 
-Anonymous Civic lookup errors:
+Anonymous Civic lookup errors (and the supported-election list endpoint):
 
 ```json
 {"error":"civic_not_configured"}

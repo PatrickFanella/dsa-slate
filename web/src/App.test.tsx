@@ -78,7 +78,10 @@ describe('App', () => {
     expect(html).toContain('Anonymous lookup ready');
     expect(html).toContain('Address is used for this lookup only and is not stored by DSA Slate.');
     expect(html).toContain('This lookup does not confirm that you are registered to vote.');
-    expect(html).toContain('Election ID');
+    expect(html).toContain('Civic election');
+    expect(html).toContain('Load supported elections');
+    expect(html).toContain('Choose an election from Google Civic before looking up an address when possible.');
+    expect(html).not.toContain('Enter an optional election ID');
     expect(html).toContain('Chapter');
     expect(html).toContain('Election');
     expect(html).toContain('Race level');

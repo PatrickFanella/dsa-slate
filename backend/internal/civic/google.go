@@ -11,7 +11,10 @@ import (
 	"strings"
 )
 
-const googleCivicLookupURL = "https://www.googleapis.com/civicinfo/v2/voterinfo"
+const (
+	googleCivicLookupURL    = "https://www.googleapis.com/civicinfo/v2/voterinfo"
+	googleCivicElectionsURL = "https://www.googleapis.com/civicinfo/v2/elections"
+)
 
 // HTTPClient is the minimal client interface used by GoogleClient.
 type HTTPClient interface {
@@ -88,6 +91,47 @@ func (c *GoogleClient) Lookup(ctx context.Context, request LookupRequest) (Looku
 	}
 
 	return mapGoogleLookupResponse(payload), nil
+}
+
+type googleElectionsResponse struct {
+	Elections []googleElection `json:"elections"`
+}
+
+// Elections lists Google Civic-supported elections.
+func (c *GoogleClient) Elections(ctx context.Context) (ElectionsResponse, error) {
+	if c.apiKey == "" {
+		return ElectionsResponse{}, errors.New("google civic api key is required")
+	}
+
+	electionsURL, err := url.Parse(googleCivicElectionsURL)
+	if err != nil {
+		return ElectionsResponse{}, fmt.Errorf("parse google civic elections url: %w", err)
+	}
+	query := electionsURL.Query()
+	query.Set("key", c.apiKey)
+	electionsURL.RawQuery = query.Encode()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, electionsURL.String(), nil)
+	if err != nil {
+		return ElectionsResponse{}, fmt.Errorf("build google civic elections request: %w", err)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return ElectionsResponse{}, fmt.Errorf("do google civic elections request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return ElectionsResponse{}, UpstreamError{StatusCode: resp.StatusCode, Message: readGoogleErrorMessage(resp)}
+	}
+
+	var payload googleElectionsResponse
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return ElectionsResponse{}, fmt.Errorf("decode google civic elections response: %w", err)
+	}
+
+	return ElectionsResponse{Source: SourceGoogleCivicInformationAPI, Elections: mapElections(payload.Elections)}, nil
 }
 
 type googleErrorResponse struct {

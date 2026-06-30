@@ -32,6 +32,12 @@ type LookupResponse struct {
 	FallbackLinks       FallbackLinks       `json:"fallbackLinks"`
 }
 
+// ElectionsResponse lists Google Civic-supported elections.
+type ElectionsResponse struct {
+	Source    string     `json:"source"`
+	Elections []Election `json:"elections"`
+}
+
 // Address is a normalized civic address block.
 type Address struct {
 	LocationName string `json:"locationName,omitempty"`
@@ -95,4 +101,5 @@ type FallbackLinks struct {
 // LookupService resolves anonymous Civic lookup requests.
 type LookupService interface {
 	Lookup(ctx context.Context, request LookupRequest) (LookupResponse, error)
+	Elections(ctx context.Context) (ElectionsResponse, error)
 }

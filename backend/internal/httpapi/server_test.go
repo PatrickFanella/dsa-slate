@@ -277,6 +277,94 @@ func TestCivicLookupMethodNotAllowed(t *testing.T) {
 	}
 }
 
+func TestCivicElectionsMethodNotAllowed(t *testing.T) {
+	handler := NewServerWithServices(directory.NewMemoryStore(directory.DirectoryData{}), nil, "", &testCivicService{})
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/civic/elections", nil)
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusMethodNotAllowed)
+	}
+	if got := rec.Header().Get("Allow"); got != http.MethodGet {
+		t.Fatalf("Allow = %q, want GET", got)
+	}
+}
+
+func TestCivicElectionsNotConfigured(t *testing.T) {
+	handler := NewServerWithServices(directory.NewMemoryStore(directory.DirectoryData{}), nil, "", nil)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/civic/elections", nil)
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusServiceUnavailable)
+	}
+	var got map[string]string
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if got["error"] != "civic_not_configured" {
+		t.Fatalf("error = %q, want civic_not_configured", got["error"])
+	}
+}
+
+func TestCivicElectionsSuccessAndUpstreamError(t *testing.T) {
+	tests := []struct {
+		name       string
+		service    civic.LookupService
+		wantStatus int
+		wantError  string
+	}{
+		{
+			name:       "success",
+			service:    &testCivicService{electionsResponse: civic.ElectionsResponse{Source: civic.SourceGoogleCivicInformationAPI, Elections: []civic.Election{{ID: "2000", Name: "VIP Test Election", ElectionDay: "2031-12-06"}}}},
+			wantStatus: http.StatusOK,
+		},
+		{
+			name:       "upstream error",
+			service:    &testCivicService{electionsErr: civic.UpstreamError{StatusCode: http.StatusBadRequest, Message: "API key not authorized"}},
+			wantStatus: http.StatusBadRequest,
+			wantError:  "civic_lookup_failed",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			handler := NewServerWithServices(directory.NewMemoryStore(directory.DirectoryData{}), nil, "", tt.service)
+			rec := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, "/api/civic/elections", nil)
+
+			handler.ServeHTTP(rec, req)
+
+			if rec.Code != tt.wantStatus {
+				t.Fatalf("status = %d, want %d", rec.Code, tt.wantStatus)
+			}
+
+			if tt.wantStatus != http.StatusOK {
+				var got map[string]string
+				if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+					t.Fatalf("decode response: %v", err)
+				}
+				if got["error"] != tt.wantError {
+					t.Fatalf("error = %q, want %q", got["error"], tt.wantError)
+				}
+				return
+			}
+
+			var got civic.ElectionsResponse
+			if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+				t.Fatalf("decode response: %v", err)
+			}
+			if len(got.Elections) != 1 || got.Elections[0].ID != "2000" {
+				t.Fatalf("response = %#v, want one election", got)
+			}
+		})
+	}
+}
+
 func TestCivicLookupNotConfigured(t *testing.T) {
 	handler := NewServerWithServices(directory.NewMemoryStore(directory.DirectoryData{}), nil, "", nil)
 	rec := httptest.NewRecorder()
@@ -465,10 +553,12 @@ func TestAdminCreateChapterDraftValidationFailure(t *testing.T) {
 }
 
 type testCivicService struct {
-	called    bool
-	request   civic.LookupRequest
-	response  civic.LookupResponse
-	lookupErr error
+	called            bool
+	request           civic.LookupRequest
+	response          civic.LookupResponse
+	lookupErr         error
+	electionsResponse civic.ElectionsResponse
+	electionsErr      error
 }
 
 func (s *testCivicService) Lookup(ctx context.Context, request civic.LookupRequest) (civic.LookupResponse, error) {
@@ -478,6 +568,13 @@ func (s *testCivicService) Lookup(ctx context.Context, request civic.LookupReque
 		return civic.LookupResponse{}, s.lookupErr
 	}
 	return s.response, nil
+}
+
+func (s *testCivicService) Elections(ctx context.Context) (civic.ElectionsResponse, error) {
+	if s.electionsErr != nil {
+		return civic.ElectionsResponse{}, s.electionsErr
+	}
+	return s.electionsResponse, nil
 }
 
 type testAdminStore struct {

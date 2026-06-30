@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { CivicLookupApiError, lookupCivicInformation } from './civicApi';
+import { CivicLookupApiError, fetchCivicElections, lookupCivicInformation } from './civicApi';
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -59,5 +59,32 @@ describe('lookupCivicInformation', () => {
       expect(civicError.code).toBe(code);
       expect(civicError.messages).toEqual(messages);
     }
+  });
+});
+
+describe('fetchCivicElections', () => {
+  it('loads Civic elections', async () => {
+    const fetcher = vi.fn(async () =>
+      jsonResponse({
+        source: 'google_civic_information_api',
+        elections: [{ id: '2000', name: 'VIP Test Election', electionDay: '2031-12-06' }],
+      }),
+    );
+
+    const response = await fetchCivicElections(fetcher);
+
+    expect(fetcher).toHaveBeenCalledWith('/api/civic/elections', {
+      headers: { Accept: 'application/json' },
+    });
+    expect(response.elections[0].id).toBe('2000');
+  });
+
+  it('throws typed errors when Civic elections are not configured', async () => {
+    const fetcher = vi.fn(async () => jsonResponse({ error: 'civic_not_configured' }, 503));
+
+    await expect(fetchCivicElections(fetcher)).rejects.toMatchObject({
+      code: 'civic_not_configured',
+      status: 503,
+    });
   });
 });

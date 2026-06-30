@@ -151,3 +151,65 @@ func TestGoogleClientLookupReturnsUpstreamErrorMessage(t *testing.T) {
 		t.Fatalf("upstream error = %#v, want status 400 message Election unknown", upstreamErr)
 	}
 }
+
+func TestGoogleClientElections(t *testing.T) {
+	const responseBody = `{"elections":[{"id":"2000","name":"VIP Test Election","electionDay":"2031-12-06"},{"id":"9438","name":"Colorado Primary Election","electionDay":"2026-06-30"}]}`
+
+	var gotRequest *http.Request
+	transport := roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		gotRequest = r.Clone(r.Context())
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(strings.NewReader(responseBody)),
+			Header:     make(http.Header),
+			Request:    r,
+		}, nil
+	})
+	client := NewGoogleClient("fake-key", &http.Client{Transport: transport})
+
+	got, err := client.Elections(context.Background())
+	if err != nil {
+		t.Fatalf("Elections() error = %v", err)
+	}
+
+	if gotRequest == nil {
+		t.Fatal("request was not captured")
+	}
+	if gotRequest.URL.Path != "/civicinfo/v2/elections" {
+		t.Fatalf("path = %q, want /civicinfo/v2/elections", gotRequest.URL.Path)
+	}
+	if gotRequest.URL.Query().Get("key") != "fake-key" {
+		t.Fatalf("key query = %q, want fake-key", gotRequest.URL.Query().Get("key"))
+	}
+	if got.Source != SourceGoogleCivicInformationAPI {
+		t.Fatalf("source = %q, want google source", got.Source)
+	}
+	if len(got.Elections) != 2 || got.Elections[1].ID != "9438" || got.Elections[1].Name != "Colorado Primary Election" {
+		t.Fatalf("elections = %#v, want mapped elections", got.Elections)
+	}
+}
+
+func TestGoogleClientElectionsReturnsUpstreamErrorMessage(t *testing.T) {
+	transport := roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusForbidden,
+			Status:     "403 Forbidden",
+			Body:       io.NopCloser(strings.NewReader(`{"error":{"code":403,"message":"API key not authorized"}}`)),
+			Header:     make(http.Header),
+			Request:    r,
+		}, nil
+	})
+	client := NewGoogleClient("fake-key", &http.Client{Transport: transport})
+
+	_, err := client.Elections(context.Background())
+	if err == nil {
+		t.Fatal("expected upstream error")
+	}
+	upstreamErr, ok := err.(UpstreamError)
+	if !ok {
+		t.Fatalf("err = %T, want UpstreamError", err)
+	}
+	if upstreamErr.StatusCode != http.StatusForbidden || upstreamErr.Message != "API key not authorized" {
+		t.Fatalf("upstream error = %#v", upstreamErr)
+	}
+}

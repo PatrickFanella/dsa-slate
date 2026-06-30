@@ -2,8 +2,10 @@ import { useState, type FormEvent, type InputHTMLAttributes, type ReactNode } fr
 import {
   CivicLookupApiError,
   civicRegistrationDisclaimer,
+  fetchCivicElections,
   lookupCivicInformation,
   type CivicAddress,
+  type CivicElection,
   type CivicLookupResponse,
   type CivicVotingLocation,
 } from '../data/civicApi';
@@ -290,6 +292,8 @@ function ResponseDetails({ response }: { response: CivicLookupResponse }) {
 export function CivicLookupPanel() {
   const [address, setAddress] = useState('');
   const [electionId, setElectionId] = useState('');
+  const [elections, setElections] = useState<CivicElection[]>([]);
+  const [electionsLoaded, setElectionsLoaded] = useState(false);
   const [response, setResponse] = useState<CivicLookupResponse | undefined>(undefined);
   const [notice, setNotice] = useState<Notice>({
     kind: 'info',
@@ -297,9 +301,38 @@ export function CivicLookupPanel() {
     messages: [
       'Address is used for this lookup only and is not stored by DSA Slate.',
       civicRegistrationDisclaimer,
-      'Enter an optional election ID only if you want to narrow the Civic lookup to a specific election.',
+      'Load supported elections, then choose one before looking up an address when possible.',
     ],
   });
+
+  async function loadElections() {
+    setNotice({ kind: 'info', title: 'Loading supported Civic elections…' });
+
+    try {
+      const nextElections = await fetchCivicElections();
+      setElections(nextElections.elections);
+      setElectionsLoaded(true);
+      setNotice({
+        kind: 'success',
+        title: nextElections.elections.length > 0 ? 'Supported elections loaded' : 'No supported elections returned',
+        messages:
+          nextElections.elections.length > 0
+            ? ['Choose an election from Google Civic before looking up an address when possible.']
+            : ['Google Civic did not return any currently supported elections. You can still try an address lookup without selecting one.'],
+      });
+    } catch (error) {
+      if (error instanceof CivicLookupApiError) {
+        setNotice({
+          kind: 'error',
+          title: error.code === 'civic_not_configured' ? 'Civic lookup not configured' : 'Election list failed',
+          messages: error.messages.length > 0 ? error.messages : ['Unable to load supported Civic elections.'],
+        });
+        return;
+      }
+
+      setNotice({ kind: 'error', title: 'Election list failed', messages: ['Unable to load supported Civic elections.'] });
+    }
+  }
 
   async function runLookup(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -371,16 +404,35 @@ export function CivicLookupPanel() {
             />
           </FieldShell>
 
-          <FieldShell htmlFor="civic-election-id" label="Election ID" hint="Optional. Leave blank to let Civic choose the best match.">
-            <TextInput
-              id="civic-election-id"
-              autoComplete="off"
-              onChange={(event) => setElectionId(event.target.value)}
-              placeholder="2026-ca-primary"
-              type="text"
-              value={electionId}
-            />
-          </FieldShell>
+          <div className="flex flex-col gap-2 text-sm font-bold text-foreground">
+            <span className="text-xs font-black uppercase tracking-[0.24em] text-primary">Civic election</span>
+            <div className="grid gap-2 md:grid-cols-[1fr_auto]">
+              <select
+                id="civic-election-id"
+                className="rounded-none border-2 border-border-strong bg-surface px-3 py-3 text-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                value={electionId}
+                onChange={(event) => setElectionId(event.target.value)}
+              >
+                <option value="">Let Civic choose</option>
+                {elections.map((election) => (
+                  <option key={election.id ?? `${election.name}-${election.electionDay}`} value={election.id ?? ''}>
+                    {[election.name, election.electionDay, election.id ? `ID ${election.id}` : undefined].filter(Boolean).join(' · ')}
+                  </option>
+                ))}
+              </select>
+              <button
+                className="rounded-none border-2 border-border-strong bg-surface px-4 py-3 font-black text-foreground transition hover:bg-surface-accent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                type="button"
+                onClick={loadElections}
+              >
+                Load supported elections
+              </button>
+            </div>
+            <span className="text-xs font-normal leading-5 text-muted">
+              Choose an election from Google Civic before looking up an address when possible.
+              {electionsLoaded ? ` ${elections.length} supported elections loaded.` : ''}
+            </span>
+          </div>
 
           <button
             className="rounded-none border-2 border-primary bg-primary px-6 py-3 font-black text-primary-foreground transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"

@@ -106,6 +106,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		s.civicLookup(w, r)
+	case "/api/civic/elections":
+		if r.Method != http.MethodGet {
+			s.methodNotAllowedAllow(w, http.MethodGet)
+			return
+		}
+		s.civicElections(w, r)
 	default:
 		if strings.HasPrefix(r.URL.Path, "/api/admin/") {
 			s.handleAdmin(w, r)
@@ -261,6 +267,30 @@ func (s *Server) civicLookup(w http.ResponseWriter, r *http.Request) {
 			"error":   "civic_lookup_failed",
 			"message": message,
 		})
+		return
+	}
+
+	s.writeJSON(w, http.StatusOK, response)
+}
+
+func (s *Server) civicElections(w http.ResponseWriter, r *http.Request) {
+	if s.civicService == nil {
+		s.writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "civic_not_configured"})
+		return
+	}
+
+	response, err := s.civicService.Elections(r.Context())
+	if err != nil {
+		statusCode := http.StatusBadGateway
+		message := "Google Civic elections lookup failed"
+		var upstreamErr civic.UpstreamError
+		if errors.As(err, &upstreamErr) {
+			message = upstreamErr.Message
+			if upstreamErr.StatusCode >= http.StatusBadRequest && upstreamErr.StatusCode < http.StatusInternalServerError {
+				statusCode = http.StatusBadRequest
+			}
+		}
+		s.writeJSON(w, statusCode, map[string]string{"error": "civic_lookup_failed", "message": message})
 		return
 	}
 

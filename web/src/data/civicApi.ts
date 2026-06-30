@@ -71,6 +71,11 @@ export type CivicLookupResponse = {
   fallbackLinks: CivicFallbackLinks;
 };
 
+export type CivicElectionsResponse = {
+  source: string;
+  elections: CivicElection[];
+};
+
 export type CivicLookupErrorCode = 'civic_not_configured' | 'validation_failed' | 'civic_lookup_failed';
 
 export class CivicLookupApiError extends Error {
@@ -145,6 +150,10 @@ function isCivicLookupResponse(body: unknown): body is CivicLookupResponse {
   return Boolean(body && typeof body === 'object' && (body as { status?: unknown }).status === 'success');
 }
 
+function isCivicElectionsResponse(body: unknown): body is CivicElectionsResponse {
+  return Boolean(body && typeof body === 'object' && Array.isArray((body as { elections?: unknown }).elections));
+}
+
 export async function lookupCivicInformation(
   request: CivicLookupRequest,
   fetcher: CivicFetch = fetch,
@@ -172,6 +181,25 @@ export async function lookupCivicInformation(
 
   if (!isCivicLookupResponse(body)) {
     throw new CivicLookupApiError(502, 'civic_lookup_failed', ['Civic lookup returned an unexpected response.']);
+  }
+
+  return body;
+}
+
+export async function fetchCivicElections(fetcher: CivicFetch = fetch): Promise<CivicElectionsResponse> {
+  const response = await fetcher('/api/civic/elections', {
+    headers: { Accept: 'application/json' },
+  });
+
+  const body = await readResponseBody(response);
+
+  if (!response.ok) {
+    const { code, messages } = parseCivicErrorBody(body);
+    throw new CivicLookupApiError(response.status, code, messages);
+  }
+
+  if (!isCivicElectionsResponse(body)) {
+    throw new CivicLookupApiError(502, 'civic_lookup_failed', ['Civic elections returned an unexpected response.']);
   }
 
   return body;
