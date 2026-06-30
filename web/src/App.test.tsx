@@ -74,6 +74,11 @@ describe('App', () => {
     expect(html).toContain('Voter guides');
     expect(html).toContain('Search this source-linked directory');
     expect(html).toContain('Browse filters use public API fields. Text search stays local. Raw addresses are not stored.');
+    expect(html).toContain('Find official election info');
+    expect(html).toContain('Anonymous lookup ready');
+    expect(html).toContain('Address is used for this lookup only and is not stored by DSA Slate.');
+    expect(html).toContain('This lookup does not confirm that you are registered to vote.');
+    expect(html).toContain('Election ID');
     expect(html).toContain('Chapter');
     expect(html).toContain('Election');
     expect(html).toContain('Race level');

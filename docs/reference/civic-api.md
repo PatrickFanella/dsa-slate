@@ -6,6 +6,8 @@ DSA Slate uses the Google Civic Information API for anonymous voting-information
 
 Use only `GOOGLE_CIVIC_API_KEY` for server-side calls to Google Civic Information API endpoints.
 
+The public homepage includes an anonymous lookup panel that posts address input directly to this endpoint and keeps the address in browser component state only.
+
 Expected behavior:
 
 1. User enters an address in the browser.

@@ -1,4 +1,5 @@
 import { AdminPanel } from './components/AdminPanel';
+import { CivicLookupPanel } from './components/CivicLookupPanel';
 import { DetailPanel } from './components/DetailPanel';
 import { EndorsementCard, MeasureCard, VoterGuideCard } from './components/DirectoryCard';
 import { MethodologyPanel } from './components/MethodologyPanel';
@@ -222,6 +223,8 @@ function PublicHomePage() {
           </div>
           <DirectoryDataStatus errorMessage={directoryState.errorMessage} status={directoryState.status} />
         </header>
+
+        <CivicLookupPanel />
 
         <section className="grid gap-4 md:grid-cols-3">
           <StatCard label="Chapters" value={directoryState.data.chapters.length.toString()} />
