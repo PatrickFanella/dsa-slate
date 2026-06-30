@@ -126,3 +126,28 @@ func TestGoogleClientLookupRejectsBlankAddress(t *testing.T) {
 		t.Fatalf("err = %v, want address validation error", err)
 	}
 }
+
+func TestGoogleClientLookupReturnsUpstreamErrorMessage(t *testing.T) {
+	transport := roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusBadRequest,
+			Status:     "400 Bad Request",
+			Body:       io.NopCloser(strings.NewReader(`{"error":{"code":400,"message":"Election unknown"}}`)),
+			Header:     make(http.Header),
+			Request:    r,
+		}, nil
+	})
+	client := NewGoogleClient("fake-key", &http.Client{Transport: transport})
+
+	_, err := client.Lookup(context.Background(), LookupRequest{Address: "123 Main St, San Diego, CA"})
+	if err == nil {
+		t.Fatal("expected upstream error")
+	}
+	upstreamErr, ok := err.(UpstreamError)
+	if !ok {
+		t.Fatalf("err = %T, want UpstreamError", err)
+	}
+	if upstreamErr.StatusCode != http.StatusBadRequest || upstreamErr.Message != "Election unknown" {
+		t.Fatalf("upstream error = %#v, want status 400 message Election unknown", upstreamErr)
+	}
+}

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -21,6 +22,18 @@ type HTTPClient interface {
 type GoogleClient struct {
 	apiKey     string
 	httpClient HTTPClient
+}
+
+type UpstreamError struct {
+	StatusCode int
+	Message    string
+}
+
+func (e UpstreamError) Error() string {
+	if e.Message == "" {
+		return fmt.Sprintf("google civic lookup returned status %d", e.StatusCode)
+	}
+	return e.Message
 }
 
 // NewGoogleClient constructs a Google Civic lookup client.
@@ -66,7 +79,7 @@ func (c *GoogleClient) Lookup(ctx context.Context, request LookupRequest) (Looku
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return LookupResponse{}, fmt.Errorf("google civic lookup returned %s", resp.Status)
+		return LookupResponse{}, UpstreamError{StatusCode: resp.StatusCode, Message: readGoogleErrorMessage(resp)}
 	}
 
 	var payload googleLookupResponse
@@ -75,6 +88,26 @@ func (c *GoogleClient) Lookup(ctx context.Context, request LookupRequest) (Looku
 	}
 
 	return mapGoogleLookupResponse(payload), nil
+}
+
+type googleErrorResponse struct {
+	Error struct {
+		Message string `json:"message"`
+	} `json:"error"`
+}
+
+func readGoogleErrorMessage(resp *http.Response) string {
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 4096))
+	if err != nil || len(body) == 0 {
+		return resp.Status
+	}
+
+	var payload googleErrorResponse
+	if err := json.Unmarshal(body, &payload); err == nil && strings.TrimSpace(payload.Error.Message) != "" {
+		return strings.TrimSpace(payload.Error.Message)
+	}
+
+	return resp.Status
 }
 
 type googleLookupResponse struct {

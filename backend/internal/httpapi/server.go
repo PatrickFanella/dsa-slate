@@ -248,9 +248,18 @@ func (s *Server) civicLookup(w http.ResponseWriter, r *http.Request) {
 
 	response, err := s.civicService.Lookup(r.Context(), request)
 	if err != nil {
-		s.writeJSON(w, http.StatusBadGateway, map[string]string{
+		statusCode := http.StatusBadGateway
+		message := "Google Civic lookup failed"
+		var upstreamErr civic.UpstreamError
+		if errors.As(err, &upstreamErr) {
+			message = upstreamErr.Message
+			if upstreamErr.StatusCode >= http.StatusBadRequest && upstreamErr.StatusCode < http.StatusInternalServerError {
+				statusCode = http.StatusBadRequest
+			}
+		}
+		s.writeJSON(w, statusCode, map[string]string{
 			"error":   "civic_lookup_failed",
-			"message": "Google Civic lookup failed",
+			"message": message,
 		})
 		return
 	}

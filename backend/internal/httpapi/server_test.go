@@ -378,6 +378,25 @@ func TestCivicLookupValidationAndSuccess(t *testing.T) {
 	}
 }
 
+func TestCivicLookupSurfacesUpstreamMessage(t *testing.T) {
+	handler := NewServerWithServices(directory.NewMemoryStore(directory.DirectoryData{}), nil, "", &testCivicService{lookupErr: civic.UpstreamError{StatusCode: http.StatusBadRequest, Message: "Election unknown"}})
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/civic/lookup", strings.NewReader(`{"address":"123 Main St, San Diego, CA"}`))
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
+	}
+	var got map[string]string
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if got["error"] != "civic_lookup_failed" || got["message"] != "Election unknown" {
+		t.Fatalf("response = %#v, want upstream civic error", got)
+	}
+}
+
 func TestAdminRoutesRequireToken(t *testing.T) {
 	handler := NewServerWithAdmin(directory.NewMemoryStore(directory.DirectoryData{}), &testAdminStore{}, "secret")
 	rec := httptest.NewRecorder()
