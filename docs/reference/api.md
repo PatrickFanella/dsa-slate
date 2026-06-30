@@ -44,9 +44,11 @@ All empty collections are JSON arrays, not `null`.
 - `GET /api/ballot-measures?electionId=<id>`
 - `GET /api/measure-positions?chapterId=<id>&measureId=<id>`
 
-## Planned Civic lookup endpoint
+## Anonymous Civic lookup endpoint
 
-`POST /api/civic/lookup` is reserved for a future anonymous Google Civic Information API integration. The first implementation must not store raw addresses. See `docs/reference/civic-api.md`.
+`POST /api/civic/lookup` is available when `GOOGLE_CIVIC_API_KEY` is configured. It returns polling-place and registration links from Google Civic Information API without storing raw addresses and without confirming voter registration status.
+
+See `docs/reference/civic-api.md` for the privacy and response contract.
 
 ## Admin draft endpoints
 
@@ -92,6 +94,20 @@ Validation errors return:
 
 ```json
 {"error":"invalid_query","message":"level must be one of federal, statewide, state_legislature, local, unknown"}
+```
+
+Anonymous Civic lookup errors:
+
+```json
+{"error":"civic_not_configured"}
+```
+
+```json
+{"error":"validation_failed","messages":["address is required"]}
+```
+
+```json
+{"error":"civic_lookup_failed","message":"Google Civic lookup failed"}
 ```
 
 ## Source-link requirements

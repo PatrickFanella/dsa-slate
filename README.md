@@ -70,6 +70,7 @@ Recommended feature order: stabilize the read API and seed data first, then buil
 
 - Run `make data-quality` after seed edits to check source-linked records against local Postgres before proposing admin/write API work.
 - `make seed` loads the imported DSA chapter directory from `seeds/chapters.sql`, then applies California electoral records from `seeds/california.sql`; runtime code reads Postgres, not the original CSV import source.
+- Set `GOOGLE_CIVIC_API_KEY` to enable anonymous `/api/civic/lookup`; the endpoint does not store raw addresses and does not confirm voter registration status.
 
 ## Open Pilot
 

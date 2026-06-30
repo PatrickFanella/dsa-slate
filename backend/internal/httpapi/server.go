@@ -10,13 +10,15 @@ import (
 
 	"git.subcult.tv/subculture-collective/dsa-slate/internal/admin"
 	"git.subcult.tv/subculture-collective/dsa-slate/internal/app"
+	"git.subcult.tv/subculture-collective/dsa-slate/internal/civic"
 	"git.subcult.tv/subculture-collective/dsa-slate/internal/directory"
 )
 
 type Server struct {
-	store      directory.Store
-	adminStore admin.Store
-	adminToken string
+	store        directory.Store
+	adminStore   admin.Store
+	adminToken   string
+	civicService civic.LookupService
 }
 
 func NewServer(store directory.Store) http.Handler {
@@ -24,10 +26,15 @@ func NewServer(store directory.Store) http.Handler {
 }
 
 func NewServerWithAdmin(store directory.Store, adminStore admin.Store, adminToken string) http.Handler {
+	return NewServerWithServices(store, adminStore, adminToken, nil)
+}
+
+func NewServerWithServices(store directory.Store, adminStore admin.Store, adminToken string, civicService civic.LookupService) http.Handler {
 	return &Server{
-		store:      store,
-		adminStore: adminStore,
-		adminToken: strings.TrimSpace(adminToken),
+		store:        store,
+		adminStore:   adminStore,
+		adminToken:   strings.TrimSpace(adminToken),
+		civicService: civicService,
 	}
 }
 
@@ -93,6 +100,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		s.measurePositions(w, r)
+	case "/api/civic/lookup":
+		if r.Method != http.MethodPost {
+			s.methodNotAllowedAllow(w, http.MethodPost)
+			return
+		}
+		s.civicLookup(w, r)
 	default:
 		if strings.HasPrefix(r.URL.Path, "/api/admin/") {
 			s.handleAdmin(w, r)
@@ -215,6 +228,43 @@ func (s *Server) measurePositions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.writeJSON(w, http.StatusOK, items)
+}
+
+func (s *Server) civicLookup(w http.ResponseWriter, r *http.Request) {
+	if s.civicService == nil {
+		s.writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "civic_not_configured"})
+		return
+	}
+
+	request, ok := s.decodeCivicLookup(w, r)
+	if !ok {
+		return
+	}
+	request.Address = strings.TrimSpace(request.Address)
+	if request.Address == "" {
+		s.writeValidationFailed(w, []string{"address is required"})
+		return
+	}
+
+	response, err := s.civicService.Lookup(r.Context(), request)
+	if err != nil {
+		s.writeJSON(w, http.StatusBadGateway, map[string]string{
+			"error":   "civic_lookup_failed",
+			"message": "Google Civic lookup failed",
+		})
+		return
+	}
+
+	s.writeJSON(w, http.StatusOK, response)
+}
+
+func (s *Server) decodeCivicLookup(w http.ResponseWriter, r *http.Request) (civic.LookupRequest, bool) {
+	var request civic.LookupRequest
+	if err := decodeStrictJSON(r, &request); err != nil {
+		s.writeValidationFailed(w, []string{"invalid JSON body"})
+		return civic.LookupRequest{}, false
+	}
+	return request, true
 }
 
 func (s *Server) handleAdmin(w http.ResponseWriter, r *http.Request) {

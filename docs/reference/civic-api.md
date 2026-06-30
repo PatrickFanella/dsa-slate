@@ -1,6 +1,6 @@
 # Google Civic API Reference
 
-DSA Slate may use the Google Civic Information API for anonymous election and district lookup. This integration must preserve the project privacy rule: do not store raw voter addresses unless a future opt-in account feature has a privacy/security review.
+DSA Slate uses the Google Civic Information API for anonymous voting-information lookup. This integration must preserve the project privacy rule: do not store raw voter addresses unless a future opt-in account feature has a privacy/security review.
 
 ## Current phase: anonymous lookup only
 
@@ -11,9 +11,11 @@ Expected behavior:
 1. User enters an address in the browser.
 2. Browser sends it to a backend lookup endpoint over HTTPS.
 3. Backend calls Google Civic API with the configured API key.
-4. Backend returns normalized election/district/official context.
+4. Backend returns normalized election, polling-place, and election-office context.
 5. Backend does not persist the raw address.
 6. Logs must not include the raw address.
+
+The endpoint does **not** confirm whether a user is registered to vote. It provides official registration-status and polling-place links instead.
 
 The OAuth client ID/secret are not required for anonymous Civic API lookup. Keep OAuth credentials reserved for a later account/sign-in slice.
 
@@ -42,7 +44,7 @@ Before storing any raw address, complete a privacy/security review covering:
 - admin access controls
 - incident response expectations
 
-## Proposed anonymous endpoint
+## Implemented anonymous endpoint
 
 ```http
 POST /api/civic/lookup
@@ -59,14 +61,28 @@ Response shape:
 
 ```json
 {
+  "status": "success",
+  "source": "google_civic_information_api",
+  "disclaimer": "This lookup does not confirm that you are registered to vote. Use your state election office registration-status link to confirm.",
   "normalizedInput": {
     "state": "CA",
     "city": "San Diego"
   },
-  "elections": [],
-  "districts": [],
-  "officials": [],
-  "source": "google_civic_information_api"
+  "pollingLocations": [],
+  "earlyVoteSites": [],
+  "dropOffLocations": [],
+  "contests": [],
+  "stateElectionOffice": {
+    "name": "California Secretary of State",
+    "electionInfoUrl": "https://www.sos.ca.gov/elections/",
+    "registrationUrl": "https://registertovote.ca.gov/",
+    "registrationConfirmationUrl": "https://voterstatus.sos.ca.gov/"
+  },
+  "fallbackLinks": {
+    "registerToVoteUrl": "https://vote.gov/",
+    "nassRegistrationStatusUrl": "https://www.nass.org/can-I-vote/voter-registration-status",
+    "nassPollingPlaceUrl": "https://www.nass.org/can-i-vote/find-your-polling-place"
+  }
 }
 ```
 

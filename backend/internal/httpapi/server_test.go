@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"git.subcult.tv/subculture-collective/dsa-slate/internal/admin"
+	"git.subcult.tv/subculture-collective/dsa-slate/internal/civic"
 	"git.subcult.tv/subculture-collective/dsa-slate/internal/directory"
 )
 
@@ -261,6 +262,122 @@ func TestMethodNotAllowed(t *testing.T) {
 	}
 }
 
+func TestCivicLookupMethodNotAllowed(t *testing.T) {
+	handler := NewServerWithServices(directory.NewMemoryStore(directory.DirectoryData{}), nil, "", nil)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/civic/lookup", nil)
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusMethodNotAllowed)
+	}
+	if got := rec.Header().Get("Allow"); got != http.MethodPost {
+		t.Fatalf("Allow = %q, want %q", got, http.MethodPost)
+	}
+}
+
+func TestCivicLookupNotConfigured(t *testing.T) {
+	handler := NewServerWithServices(directory.NewMemoryStore(directory.DirectoryData{}), nil, "", nil)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/civic/lookup", strings.NewReader(`{"address":"123 Main St, San Diego, CA"}`))
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusServiceUnavailable)
+	}
+	var got map[string]string
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if got["error"] != "civic_not_configured" {
+		t.Fatalf("error = %q, want civic_not_configured", got["error"])
+	}
+}
+
+func TestCivicLookupValidationAndSuccess(t *testing.T) {
+	tests := []struct {
+		name           string
+		body           string
+		service        civic.LookupService
+		wantStatus     int
+		wantError      string
+		wantMessages   []string
+		wantPollingLen int
+	}{
+		{
+			name:         "blank address",
+			body:         `{"address":"   "}`,
+			service:      &testCivicService{},
+			wantStatus:   http.StatusBadRequest,
+			wantError:    "validation_failed",
+			wantMessages: []string{"address is required"},
+		},
+		{
+			name:           "success",
+			body:           `{"address":"123 Main St, San Diego, CA","electionId":"2000"}`,
+			service:        &testCivicService{response: civic.LookupResponse{Status: "success", Source: civic.SourceGoogleCivicInformationAPI, Disclaimer: civic.RegistrationDisclaimer, PollingLocations: []civic.VotingLocation{{Address: civic.Address{Line1: "100 POLLING PL"}}}}},
+			wantStatus:     http.StatusOK,
+			wantPollingLen: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			testService := tt.service.(*testCivicService)
+			testService.called = false
+			testService.request = civic.LookupRequest{}
+
+			handler := NewServerWithServices(directory.NewMemoryStore(directory.DirectoryData{}), nil, "", tt.service)
+			rec := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/civic/lookup", strings.NewReader(tt.body))
+
+			handler.ServeHTTP(rec, req)
+
+			if rec.Code != tt.wantStatus {
+				t.Fatalf("status = %d, want %d", rec.Code, tt.wantStatus)
+			}
+
+			if tt.wantStatus == http.StatusBadRequest {
+				var got map[string]any
+				if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+					t.Fatalf("decode response: %v", err)
+				}
+				if got["error"] != tt.wantError {
+					t.Fatalf("error = %q, want %q", got["error"], tt.wantError)
+				}
+				messages := got["messages"].([]any)
+				if len(messages) != len(tt.wantMessages) || messages[0] != tt.wantMessages[0] {
+					t.Fatalf("messages = %#v, want %#v", messages, tt.wantMessages)
+				}
+				if testService.called {
+					t.Fatal("service should not be called for invalid input")
+				}
+				return
+			}
+
+			if !testService.called {
+				t.Fatal("service was not called")
+			}
+			if testService.request.Address != "123 Main St, San Diego, CA" || testService.request.ElectionID != "2000" {
+				t.Fatalf("request = %#v, want trimmed input passed to service", testService.request)
+			}
+
+			var got civic.LookupResponse
+			if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+				t.Fatalf("decode response: %v", err)
+			}
+			if got.Disclaimer != civic.RegistrationDisclaimer {
+				t.Fatalf("disclaimer = %q, want civic disclaimer", got.Disclaimer)
+			}
+			if len(got.PollingLocations) != tt.wantPollingLen {
+				t.Fatalf("polling locations len = %d, want %d", len(got.PollingLocations), tt.wantPollingLen)
+			}
+		})
+	}
+}
+
 func TestAdminRoutesRequireToken(t *testing.T) {
 	handler := NewServerWithAdmin(directory.NewMemoryStore(directory.DirectoryData{}), &testAdminStore{}, "secret")
 	rec := httptest.NewRecorder()
@@ -326,6 +443,22 @@ func TestAdminCreateChapterDraftValidationFailure(t *testing.T) {
 	if got["error"] != "validation_failed" {
 		t.Fatalf("error = %#v, want validation_failed", got["error"])
 	}
+}
+
+type testCivicService struct {
+	called    bool
+	request   civic.LookupRequest
+	response  civic.LookupResponse
+	lookupErr error
+}
+
+func (s *testCivicService) Lookup(ctx context.Context, request civic.LookupRequest) (civic.LookupResponse, error) {
+	s.called = true
+	s.request = request
+	if s.lookupErr != nil {
+		return civic.LookupResponse{}, s.lookupErr
+	}
+	return s.response, nil
 }
 
 type testAdminStore struct {
