@@ -19,19 +19,29 @@ describe('savedSlateApi', () => {
   });
 
   it('saves an endorsement reference', async () => {
-    const body = { id: 'item-1', userId: 'user-1', endorsementId: 'endorsement-1', createdAt: '2026-06-30T00:00:00Z', updatedAt: '2026-06-30T00:00:00Z' };
+    const body = { id: 'item-1', userId: 'user-1', recordType: 'endorsement', recordId: 'endorsement-1', createdAt: '2026-06-30T00:00:00Z', updatedAt: '2026-06-30T00:00:00Z' };
     const fetcher = vi.fn(async () => jsonResponse(body));
 
-    const item = await saveSlateItem('endorsement-1', fetcher);
+    const item = await saveSlateItem('endorsement', 'endorsement-1', fetcher);
 
     expect(fetcher).toHaveBeenCalledWith('/api/me/slate/items', expect.objectContaining({ method: 'PUT', headers: expect.any(Headers) }));
     const [, options] = fetcher.mock.calls[0] as unknown as [RequestInfo | URL, RequestInit?];
-    expect(options?.body).toBe(JSON.stringify({ endorsementId: 'endorsement-1' }));
+    expect(options?.body).toBe(JSON.stringify({ recordType: 'endorsement', recordId: 'endorsement-1' }));
     expect([...new Headers(options?.headers).entries()]).toEqual([
       ['accept', 'application/json'],
       ['content-type', 'application/json'],
     ]);
     expect(item).toEqual(body);
+  });
+
+  it('saves measure position and voter guide references', async () => {
+    const fetcher = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { recordType: string; recordId: string };
+      return jsonResponse({ id: `item-${body.recordId}`, userId: 'user-1', ...body, createdAt: '2026-06-30T00:00:00Z', updatedAt: '2026-06-30T00:00:00Z' });
+    });
+
+    await expect(saveSlateItem('measure_position', 'measure-position-1', fetcher)).resolves.toMatchObject({ recordType: 'measure_position', recordId: 'measure-position-1' });
+    await expect(saveSlateItem('voter_guide', 'voter-guide-1', fetcher)).resolves.toMatchObject({ recordType: 'voter_guide', recordId: 'voter-guide-1' });
   });
 
   it('deletes a saved slate item', async () => {

@@ -3,16 +3,17 @@ import { CivicLookupPanel } from './components/CivicLookupPanel';
 import { DetailPanel } from './components/DetailPanel';
 import { EndorsementCard, MeasureCard, VoterGuideCard } from './components/DirectoryCard';
 import { MethodologyPanel } from './components/MethodologyPanel';
-import { allDirectoryCards, buildDirectoryCards, type DirectoryCardKey } from './data';
+import { allDirectoryCards, buildDirectoryCards, type DirectoryCardData, type DirectoryCardKey } from './data';
 import { fetchAuthSession, logout as logoutAuth, type AuthState } from './data/authApi';
 import { filterDirectoryCards } from './data/filter';
-import { deleteSlateItem, fetchSavedSlate, saveSlateItem, type SavedSlateItem } from './data/savedSlateApi';
+import { deleteSlateItem, fetchSavedSlate, saveSlateItem, type SavedSlateItem, type SavedSlateRecordType } from './data/savedSlateApi';
 import type { BrowseFilters } from './data/api';
 import { useDirectoryData, type DirectoryLoadStatus } from './data/useDirectoryData';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 
 type ThemeMode = 'light' | 'dark';
+type SavedRecordKey = `${SavedSlateRecordType}:${string}`;
 
 const THEME_STORAGE_KEY = 'dsa-slate-theme';
 
@@ -52,6 +53,24 @@ function getInitialTheme(): ThemeMode {
   return storedTheme ?? 'light';
 }
 
+function savedRecordTypeForCard(card: DirectoryCardData): SavedSlateRecordType {
+  if (card.kind === 'endorsement') {
+    return 'endorsement';
+  }
+  if (card.kind === 'measure') {
+    return 'measure_position';
+  }
+  return 'voter_guide';
+}
+
+function savedRecordKey(recordType: SavedSlateRecordType, recordId: string): SavedRecordKey {
+  return `${recordType}:${recordId}`;
+}
+
+function savedRecordKeyForCard(card: DirectoryCardData): SavedRecordKey {
+  return savedRecordKey(savedRecordTypeForCard(card), card.id);
+}
+
 function PublicHomePage() {
   const [query, setQuery] = useState('');
   const [chapterId, setChapterId] = useState('');
@@ -61,7 +80,7 @@ function PublicHomePage() {
   const [theme, setTheme] = useState<ThemeMode>(() => getInitialTheme());
   const [authState, setAuthState] = useState<AuthState>({ authenticated: false });
   const [savedItems, setSavedItems] = useState<SavedSlateItem[]>([]);
-  const [savingEndorsementId, setSavingEndorsementId] = useState<string | undefined>(undefined);
+  const [savingRecordKey, setSavingRecordKey] = useState<SavedRecordKey | undefined>(undefined);
   const [slateMessage, setSlateMessage] = useState<string | undefined>(undefined);
   const browseFilters = useMemo<BrowseFilters>(
     () => ({
@@ -102,11 +121,12 @@ function PublicHomePage() {
   const visibleResultCount = endorsementCards.length + measureCards.length + voterGuideCards.length;
   const hasResults = visibleResultCount > 0;
   const noVisibleResults = !hasResults;
-  const savedItemByEndorsementId = useMemo(
-    () => new Map(savedItems.map((item) => [item.endorsementId, item])),
+  const savedItemByRecordKey = useMemo(
+    () => new Map(savedItems.map((item) => [savedRecordKey(item.recordType, item.recordId), item])),
     [savedItems],
   );
-  const selectedSavedItem = selectedCard?.kind === 'endorsement' ? savedItemByEndorsementId.get(selectedCard.id) : undefined;
+  const selectedRecordKey = selectedCard ? savedRecordKeyForCard(selectedCard) : undefined;
+  const selectedSavedItem = selectedRecordKey ? savedItemByRecordKey.get(selectedRecordKey) : undefined;
 
   useEffect(() => {
     if (selectedCardKey && !selectedCard) {
@@ -149,28 +169,30 @@ function PublicHomePage() {
   }, []);
 
   const nextTheme = theme === 'light' ? 'dark' : 'light';
-  const toggleSaved = async (endorsementId: string) => {
+  const toggleSaved = async (card: DirectoryCardData) => {
     if (!authState.authenticated) {
-      setSlateMessage('Sign in with Google to save endorsements to your slate.');
+      setSlateMessage('Sign in with Google to save records to your slate.');
       return;
     }
-    setSavingEndorsementId(endorsementId);
+    const recordType = savedRecordTypeForCard(card);
+    const recordKey = savedRecordKey(recordType, card.id);
+    setSavingRecordKey(recordKey);
     setSlateMessage(undefined);
     try {
-      const existing = savedItemByEndorsementId.get(endorsementId);
+      const existing = savedItemByRecordKey.get(recordKey);
       if (existing) {
         await deleteSlateItem(existing.id);
         setSavedItems((items) => items.filter((item) => item.id !== existing.id));
         setSlateMessage('Removed from your slate.');
       } else {
-        const item = await saveSlateItem(endorsementId);
-        setSavedItems((items) => [...items.filter((saved) => saved.endorsementId !== endorsementId), item]);
+        const item = await saveSlateItem(recordType, card.id);
+        setSavedItems((items) => [...items.filter((saved) => savedRecordKey(saved.recordType, saved.recordId) !== recordKey), item]);
         setSlateMessage('Saved to your slate.');
       }
     } catch {
       setSlateMessage('Could not update your slate. Try again.');
     } finally {
-      setSavingEndorsementId(undefined);
+      setSavingRecordKey(undefined);
     }
   };
 
@@ -212,7 +234,7 @@ function PublicHomePage() {
             <a className="font-black text-primary underline-offset-4 hover:underline" href="/me/slate">
               My Slate
             </a>
-            {' '}saves public endorsement references only. {slateMessage ?? `${savedItems.length} saved.`}
+            {' '}saves public record references only. {slateMessage ?? `${savedItems.length} saved.`}
           </p>
           <div className="mt-8 grid gap-3 rounded-none border-2 border-border bg-surface-muted p-4 md:grid-cols-[1fr_auto]">
             <label className="sr-only" htmlFor="slate-search">
@@ -312,9 +334,9 @@ function PublicHomePage() {
             <DetailPanel
               authenticated={authState.authenticated}
               item={selectedCard}
-              onToggleSaved={selectedCard?.kind === 'endorsement' ? () => toggleSaved(selectedCard.id) : undefined}
+              onToggleSaved={selectedCard ? () => toggleSaved(selectedCard) : undefined}
               saved={Boolean(selectedSavedItem)}
-              saving={selectedCard?.kind === 'endorsement' && savingEndorsementId === selectedCard.id}
+              saving={Boolean(selectedRecordKey && savingRecordKey === selectedRecordKey)}
             />
           </div>
           <div className="flex flex-col gap-10 lg:order-1">
@@ -331,8 +353,12 @@ function PublicHomePage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   {voterGuideCards.map((item) => (
                     <VoterGuideCard
+                      authenticated={authState.authenticated}
                       item={item}
                       key={item.id}
+                      onToggleSaved={() => toggleSaved(item)}
+                      saved={savedItemByRecordKey.has(savedRecordKeyForCard(item))}
+                      saving={savingRecordKey === savedRecordKeyForCard(item)}
                       selected={selectedCardKey === item.key}
                       onSelect={() => setSelectedCardKey(item.key)}
                     />
@@ -355,9 +381,9 @@ function PublicHomePage() {
                       authenticated={authState.authenticated}
                       item={item}
                       key={item.id}
-                      onToggleSaved={() => toggleSaved(item.id)}
-                      saved={savedItemByEndorsementId.has(item.id)}
-                      saving={savingEndorsementId === item.id}
+                      onToggleSaved={() => toggleSaved(item)}
+                      saved={savedItemByRecordKey.has(savedRecordKeyForCard(item))}
+                      saving={savingRecordKey === savedRecordKeyForCard(item)}
                       selected={selectedCardKey === item.key}
                       onSelect={() => setSelectedCardKey(item.key)}
                     />
@@ -377,8 +403,12 @@ function PublicHomePage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   {measureCards.map((item) => (
                     <MeasureCard
+                      authenticated={authState.authenticated}
                       item={item}
                       key={item.id}
+                      onToggleSaved={() => toggleSaved(item)}
+                      saved={savedItemByRecordKey.has(savedRecordKeyForCard(item))}
+                      saving={savingRecordKey === savedRecordKeyForCard(item)}
                       selected={selectedCardKey === item.key}
                       onSelect={() => setSelectedCardKey(item.key)}
                     />
@@ -412,10 +442,10 @@ function SavedSlatePage() {
   const [savedItems, setSavedItems] = useState<SavedSlateItem[]>([]);
   const [message, setMessage] = useState<string>('Checking signed-in session.');
   const directoryState = useDirectoryData(fetch, {});
-  const endorsementCards = useMemo(() => buildDirectoryCards(directoryState.data).endorsements, [directoryState.data]);
-  const savedEndorsementIds = useMemo(() => new Set(savedItems.map((item) => item.endorsementId)), [savedItems]);
-  const savedCards = endorsementCards.filter((card) => savedEndorsementIds.has(card.id));
-  const itemByEndorsementId = useMemo(() => new Map(savedItems.map((item) => [item.endorsementId, item])), [savedItems]);
+  const directoryCards = useMemo(() => buildDirectoryCards(directoryState.data), [directoryState.data]);
+  const savedRecordKeys = useMemo(() => new Set(savedItems.map((item) => savedRecordKey(item.recordType, item.recordId))), [savedItems]);
+  const savedCards = allDirectoryCards(directoryCards).filter((card) => savedRecordKeys.has(savedRecordKeyForCard(card)));
+  const itemByRecordKey = useMemo(() => new Map(savedItems.map((item) => [savedRecordKey(item.recordType, item.recordId), item])), [savedItems]);
 
   useEffect(() => {
     let active = true;
@@ -433,7 +463,7 @@ function SavedSlatePage() {
         return fetchSavedSlate().then((slate) => {
           if (active) {
             setSavedItems(slate.items);
-            setMessage(`${slate.items.length} saved ${slate.items.length === 1 ? 'endorsement' : 'endorsements'}.`);
+            setMessage(`${slate.items.length} saved ${slate.items.length === 1 ? 'record' : 'records'}.`);
           }
         });
       })
@@ -450,8 +480,8 @@ function SavedSlatePage() {
     };
   }, []);
 
-  const removeSaved = async (endorsementId: string) => {
-    const item = itemByEndorsementId.get(endorsementId);
+  const removeSaved = async (card: DirectoryCardData) => {
+    const item = itemByRecordKey.get(savedRecordKeyForCard(card));
     if (!item) {
       return;
     }
@@ -460,7 +490,7 @@ function SavedSlatePage() {
       setSavedItems((items) => items.filter((saved) => saved.id !== item.id));
       setMessage('Removed from your slate.');
     } catch {
-      setMessage('Could not remove that endorsement. Try again.');
+      setMessage('Could not remove that record. Try again.');
     }
   };
 
@@ -469,9 +499,9 @@ function SavedSlatePage() {
       <section className="mx-auto flex max-w-5xl flex-col gap-8">
         <header className="rounded-none border-2 border-border-strong bg-surface p-8 shadow-[10px_10px_0_var(--theme-shadow)]">
           <p className="text-sm font-black uppercase tracking-[0.28em] text-primary">My Slate</p>
-          <h1 className="mt-4 font-display text-4xl font-black tracking-tight text-foreground">Saved endorsements</h1>
+          <h1 className="mt-4 font-display text-4xl font-black tracking-tight text-foreground">Saved records</h1>
           <p className="mt-4 max-w-3xl text-lg leading-8 text-muted">
-            Your slate stores references to public endorsements only. Raw voter addresses are not stored.
+            Your slate stores references to public endorsements, voter guides, and ballot-measure positions. Raw voter addresses are not stored.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <a className="rounded-none border-2 border-primary bg-primary px-5 py-3 font-black text-primary-foreground" href="/">
@@ -490,20 +520,20 @@ function SavedSlatePage() {
         </header>
 
         {authState.authenticated && savedCards.length === 0 ? (
-          <EmptyStateCard message="No saved endorsements yet. Return to the directory and save candidate endorsements to build your slate." />
+          <EmptyStateCard message="No saved records yet. Return to the directory and save endorsements, voter guides, or ballot-measure positions to build your slate." />
         ) : null}
 
         {authState.authenticated && savedCards.length > 0 ? (
           <section className="grid gap-4 md:grid-cols-2">
-            {savedCards.map((item) => (
-              <EndorsementCard
-                authenticated
-                item={item}
-                key={item.id}
-                onToggleSaved={() => removeSaved(item.id)}
-                saved
-              />
-            ))}
+            {savedCards.map((item) => {
+              if (item.kind === 'endorsement') {
+                return <EndorsementCard authenticated item={item} key={item.key} onToggleSaved={() => removeSaved(item)} saved />;
+              }
+              if (item.kind === 'measure') {
+                return <MeasureCard authenticated item={item} key={item.key} onToggleSaved={() => removeSaved(item)} saved />;
+              }
+              return <VoterGuideCard authenticated item={item} key={item.key} onToggleSaved={() => removeSaved(item)} saved />;
+            })}
           </section>
         ) : null}
       </section>

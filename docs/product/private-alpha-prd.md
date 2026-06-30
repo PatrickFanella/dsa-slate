@@ -26,7 +26,7 @@ Already built:
 - anonymous Civic lookup endpoint and public lookup panel
 - Civic supported-election dropdown
 - Google sign-in with local user sessions
-- saved-slate API and UI for public endorsement references
+- saved-slate API and UI for public endorsement, measure-position, and voter-guide references
 - no raw address storage in current runtime
 
 ## Private alpha goals
@@ -180,7 +180,7 @@ Private alpha must support saving:
 - optional notes or labels later
 
 Saved slate records must reference public IDs, not duplicate source text.
-Current implementation saves endorsement IDs first; measure position and voter guide saved items remain follow-up work.
+Current implementation saves endorsement, measure-position, and voter-guide IDs.
 
 ### Civic integration
 
@@ -248,7 +248,7 @@ Post-alpha should add:
 
 - Invited user can sign in.
 - Signed-in user can save and remove at least one endorsement.
-- Follow-up: signed-in user can save one measure position and one voter guide.
+- Signed-in user can save and remove at least one measure position and one voter guide.
 - Signed-in user can view “My Slate.”
 - Anonymous user can still browse without an account.
 - Civic lookup works with supported-election dropdown.
@@ -274,8 +274,7 @@ Post-alpha should add:
 
 1. Auth/session foundation.
 2. Role-gated admin console.
-3. Saved slate data model/API for endorsements.
-4. Saved slate UI for endorsements.
-5. Add measure-position and voter-guide saved item support.
-6. Private alpha polish pass.
-7. Privacy/security design for opt-in saved addresses.
+3. Saved slate data model/API.
+4. Saved slate UI.
+5. Private alpha polish pass.
+6. Privacy/security design for opt-in saved addresses.

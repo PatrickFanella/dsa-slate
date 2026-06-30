@@ -17,7 +17,7 @@ First trusted-directory slice:
 - candidate recommendation, ballot measure, and voter guide cards
 - source URLs, source dates, and confidence labels on every public item
 - manual seed-file workflow with documented editorial rules
-- authenticated saved-slate API for saving public endorsement references
+- authenticated saved-slate API for saving public record references
 - no raw voter address storage
 
 Out of scope for the first launch: address lookup, admin UI, public submissions, live election-night results, campaign coordination, address storage, and automated nationwide scraping.
@@ -77,7 +77,7 @@ Recommended feature order: stabilize the read API and seed data first, then buil
 - The public homepage includes a Civic lookup panel with a supported-election dropdown for anonymous address-based election info; the submitted address stays in browser component state only.
 - For local Google sign-in, configure `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REDIRECT_URL`, and `APP_BASE_URL`. In Google Cloud Console, add this redirect URI: `http://localhost:5173/api/auth/google/callback`.
 - Google sign-in creates local `user` accounts. Existing `editor`/`admin` emails must have an explicit Google OAuth identity link before they can inherit privileged roles.
-- Signed-in users can save public endorsement references through the saved-slate API. The app stores user IDs and endorsement IDs, not raw voter addresses.
+- Signed-in users can save public endorsement, measure-position, and voter-guide references through the saved-slate API. The app stores user IDs and public record IDs, not raw voter addresses.
 
 ## Open Pilot
 

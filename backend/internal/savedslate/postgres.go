@@ -24,7 +24,7 @@ func NewPostgresStore(pool *pgxpool.Pool) *PostgresStore {
 // ListForUser returns saved slate items for one user, oldest first.
 func (s *PostgresStore) ListForUser(ctx context.Context, userID string) ([]Item, error) {
 	rows, err := s.pool.Query(ctx, `
-		SELECT id, user_id, endorsement_id, created_at, updated_at
+		SELECT id, user_id, record_type, record_id, created_at, updated_at
 		FROM saved_slate_items
 		WHERE user_id = $1
 		ORDER BY created_at ASC, id ASC
@@ -48,28 +48,33 @@ func (s *PostgresStore) ListForUser(ctx context.Context, userID string) ([]Item,
 	return items, nil
 }
 
-// UpsertForUser saves one public endorsement to a user's slate.
-func (s *PostgresStore) UpsertForUser(ctx context.Context, userID string, endorsementID string) (Item, error) {
+// UpsertForUser saves one public record to a user's slate.
+func (s *PostgresStore) UpsertForUser(ctx context.Context, userID string, recordType string, recordID string) (Item, error) {
 	userID = strings.TrimSpace(userID)
-	endorsementID = strings.TrimSpace(endorsementID)
-	if userID == "" || endorsementID == "" {
+	recordType = strings.TrimSpace(recordType)
+	recordID = strings.TrimSpace(recordID)
+	if userID == "" || recordID == "" {
+		return Item{}, ErrInvalidReference
+	}
+	recordType, ok := NormalizeRecordType(recordType)
+	if !ok {
 		return Item{}, ErrInvalidReference
 	}
 
 	var exists bool
-	if err := s.pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM endorsements WHERE id = $1)`, endorsementID).Scan(&exists); err != nil {
-		return Item{}, fmt.Errorf("validate endorsement reference: %w", err)
+	if err := s.pool.QueryRow(ctx, referenceExistsQuery(recordType), recordID).Scan(&exists); err != nil {
+		return Item{}, fmt.Errorf("validate saved slate reference: %w", err)
 	}
 	if !exists {
 		return Item{}, ErrInvalidReference
 	}
 
 	row := s.pool.QueryRow(ctx, `
-		INSERT INTO saved_slate_items (id, user_id, endorsement_id)
-		VALUES ($1, $2, $3)
-		ON CONFLICT (user_id, endorsement_id) DO UPDATE SET updated_at = now()
-		RETURNING id, user_id, endorsement_id, created_at, updated_at
-	`, itemID(userID, endorsementID), userID, endorsementID)
+		INSERT INTO saved_slate_items (id, user_id, record_type, record_id)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (user_id, record_type, record_id) DO UPDATE SET updated_at = now()
+		RETURNING id, user_id, record_type, record_id, created_at, updated_at
+	`, itemID(userID, recordType, recordID), userID, recordType, recordID)
 	return scanItem(row)
 }
 
@@ -88,8 +93,21 @@ func (s *PostgresStore) DeleteForUser(ctx context.Context, userID string, itemID
 	return nil
 }
 
-func itemID(userID string, endorsementID string) string {
-	sum := sha256.Sum256([]byte(strings.TrimSpace(userID) + "\x00" + strings.TrimSpace(endorsementID)))
+func referenceExistsQuery(recordType string) string {
+	switch recordType {
+	case RecordTypeEndorsement:
+		return `SELECT EXISTS (SELECT 1 FROM endorsements WHERE id = $1)`
+	case RecordTypeMeasurePosition:
+		return `SELECT EXISTS (SELECT 1 FROM measure_positions WHERE id = $1)`
+	case RecordTypeVoterGuide:
+		return `SELECT EXISTS (SELECT 1 FROM voter_guides WHERE id = $1)`
+	default:
+		return `SELECT false`
+	}
+}
+
+func itemID(userID string, recordType string, recordID string) string {
+	sum := sha256.Sum256([]byte(strings.TrimSpace(userID) + "\x00" + strings.TrimSpace(recordType) + "\x00" + strings.TrimSpace(recordID)))
 	return "ssi_" + hex.EncodeToString(sum[:])
 }
 
@@ -99,21 +117,23 @@ type rowScanner interface {
 
 func scanItem(row rowScanner) (Item, error) {
 	var (
-		id            sql.NullString
-		userID        sql.NullString
-		endorsementID sql.NullString
-		createdAt     sql.NullTime
-		updatedAt     sql.NullTime
+		id         sql.NullString
+		userID     sql.NullString
+		recordType sql.NullString
+		recordID   sql.NullString
+		createdAt  sql.NullTime
+		updatedAt  sql.NullTime
 	)
-	if err := row.Scan(&id, &userID, &endorsementID, &createdAt, &updatedAt); err != nil {
+	if err := row.Scan(&id, &userID, &recordType, &recordID, &createdAt, &updatedAt); err != nil {
 		return Item{}, fmt.Errorf("scan saved slate item: %w", err)
 	}
 	return Item{
-		ID:            id.String,
-		UserID:        userID.String,
-		EndorsementID: endorsementID.String,
-		CreatedAt:     createdAt.Time.UTC().Round(0),
-		UpdatedAt:     updatedAt.Time.UTC().Round(0),
+		ID:         id.String,
+		UserID:     userID.String,
+		RecordType: recordType.String,
+		RecordID:   recordID.String,
+		CreatedAt:  createdAt.Time.UTC().Round(0),
+		UpdatedAt:  updatedAt.Time.UTC().Round(0),
 	}, nil
 }
 

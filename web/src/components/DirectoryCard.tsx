@@ -35,6 +35,23 @@ function SelectionButton({ children, onSelect, selected }: SelectableCardProps &
   );
 }
 
+function SaveButton({ authenticated, saved, saving, onToggleSaved }: SaveActionProps) {
+  if (!onToggleSaved) {
+    return null;
+  }
+
+  return (
+    <button
+      className="mt-4 w-full rounded-none border-2 border-border-strong bg-surface-muted px-4 py-2 text-sm font-black text-foreground transition hover:bg-surface-accent disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      disabled={!authenticated || saving}
+      type="button"
+      onClick={onToggleSaved}
+    >
+      {saving ? (saved ? 'Removing…' : 'Saving…') : saved ? 'Remove from my slate' : authenticated ? 'Save to my slate' : 'Sign in to save'}
+    </button>
+  );
+}
+
 export function EndorsementCard({
   authenticated,
   item,
@@ -59,21 +76,20 @@ export function EndorsementCard({
         sourceDate={item.sourceDate}
         sourceUrl={item.sourceUrl}
       />
-      {onToggleSaved ? (
-        <button
-          className="mt-4 w-full rounded-none border-2 border-border-strong bg-surface-muted px-4 py-2 text-sm font-black text-foreground transition hover:bg-surface-accent disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          disabled={!authenticated || saving}
-          type="button"
-          onClick={onToggleSaved}
-        >
-          {saving ? (saved ? 'Removing…' : 'Saving…') : saved ? 'Remove from my slate' : authenticated ? 'Save to my slate' : 'Sign in to save'}
-        </button>
-      ) : null}
+      <SaveButton authenticated={authenticated} onToggleSaved={onToggleSaved} saved={saved} saving={saving} />
     </article>
   );
 }
 
-export function MeasureCard({ item, onSelect, selected }: { item: MeasureCardData } & SelectableCardProps) {
+export function MeasureCard({
+  authenticated,
+  item,
+  onSelect,
+  onToggleSaved,
+  saved,
+  saving,
+  selected,
+}: { item: MeasureCardData } & SelectableCardProps & SaveActionProps) {
   return (
     <article className={cardClassName(selected)} data-selected={selected ? 'true' : 'false'}>
       <SelectionButton onSelect={onSelect} selected={selected}>
@@ -84,11 +100,20 @@ export function MeasureCard({ item, onSelect, selected }: { item: MeasureCardDat
         </p>
       </SelectionButton>
       <SourceBadge confidence={item.confidence} sourceUrl={item.sourceUrl} />
+      <SaveButton authenticated={authenticated} onToggleSaved={onToggleSaved} saved={saved} saving={saving} />
     </article>
   );
 }
 
-export function VoterGuideCard({ item, onSelect, selected }: { item: VoterGuideCardData } & SelectableCardProps) {
+export function VoterGuideCard({
+  authenticated,
+  item,
+  onSelect,
+  onToggleSaved,
+  saved,
+  saving,
+  selected,
+}: { item: VoterGuideCardData } & SelectableCardProps & SaveActionProps) {
   return (
     <article className={cardClassName(selected)} data-selected={selected ? 'true' : 'false'}>
       <SelectionButton onSelect={onSelect} selected={selected}>
@@ -98,6 +123,7 @@ export function VoterGuideCard({ item, onSelect, selected }: { item: VoterGuideC
         {item.summary ? <p className="mt-3 text-sm leading-6 text-muted">{item.summary}</p> : null}
       </SelectionButton>
       <SourceBadge confidence={item.confidence} sourceDate={item.publishedAt} sourceUrl={item.sourceUrl} />
+      <SaveButton authenticated={authenticated} onToggleSaved={onToggleSaved} saved={saved} saving={saving} />
     </article>
   );
 }

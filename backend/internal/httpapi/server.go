@@ -450,7 +450,7 @@ func (s *Server) savedSlateItemCollection(w http.ResponseWriter, r *http.Request
 	if !ok {
 		return
 	}
-	item, err := s.slateStore.UpsertForUser(r.Context(), user.ID, request.EndorsementID)
+	item, err := s.slateStore.UpsertForUser(r.Context(), user.ID, request.RecordType, request.RecordID)
 	if err != nil {
 		s.writeSavedSlateStoreError(w, err)
 		return
@@ -484,7 +484,8 @@ func (s *Server) savedSlateItem(w http.ResponseWriter, r *http.Request) {
 }
 
 type savedSlateItemRequest struct {
-	EndorsementID string `json:"endorsementId"`
+	RecordType string `json:"recordType"`
+	RecordID   string `json:"recordId"`
 }
 
 func (s *Server) decodeSavedSlateItem(w http.ResponseWriter, r *http.Request) (savedSlateItemRequest, bool) {
@@ -493,9 +494,14 @@ func (s *Server) decodeSavedSlateItem(w http.ResponseWriter, r *http.Request) (s
 		s.writeValidationFailed(w, []string{"invalid JSON body"})
 		return savedSlateItemRequest{}, false
 	}
-	request.EndorsementID = strings.TrimSpace(request.EndorsementID)
-	if request.EndorsementID == "" {
-		s.writeValidationFailed(w, []string{"endorsementId is required"})
+	request.RecordType = strings.TrimSpace(request.RecordType)
+	request.RecordID = strings.TrimSpace(request.RecordID)
+	if _, ok := savedslate.NormalizeRecordType(request.RecordType); !ok {
+		s.writeValidationFailed(w, []string{"recordType must be one of endorsement, measure_position, voter_guide"})
+		return savedSlateItemRequest{}, false
+	}
+	if request.RecordID == "" {
+		s.writeValidationFailed(w, []string{"recordId is required"})
 		return savedSlateItemRequest{}, false
 	}
 	return request, true
@@ -899,7 +905,7 @@ func (s *Server) writeAdminStoreError(w http.ResponseWriter, err error) {
 
 func (s *Server) writeSavedSlateStoreError(w http.ResponseWriter, err error) {
 	if errors.Is(err, savedslate.ErrInvalidReference) {
-		s.writeValidationFailed(w, []string{"endorsementId must reference an existing endorsement"})
+		s.writeValidationFailed(w, []string{"recordId must reference an existing public record of recordType"})
 		return
 	}
 	if errors.Is(err, sql.ErrNoRows) {

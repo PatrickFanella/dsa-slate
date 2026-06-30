@@ -625,21 +625,21 @@ func TestSavedSlateListAndUpsertForAuthenticatedUser(t *testing.T) {
 	handler := NewServerWithAuthAndServices(directory.NewMemoryStore(directory.DirectoryData{}), authStore, nil, nil, store, "", nil)
 
 	putRec := httptest.NewRecorder()
-	putReq := httptest.NewRequest(http.MethodPut, "/api/me/slate/items", strings.NewReader(`{"endorsementId":"endorsement-1"}`))
+	putReq := httptest.NewRequest(http.MethodPut, "/api/me/slate/items", strings.NewReader(`{"recordType":"endorsement","recordId":"endorsement-1"}`))
 	putReq.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: "session-1"})
 	handler.ServeHTTP(putRec, putReq)
 
 	if putRec.Code != http.StatusOK {
 		t.Fatalf("upsert status = %d, want %d", putRec.Code, http.StatusOK)
 	}
-	if store.lastUserID != "user-1" || store.lastEndorsementID != "endorsement-1" {
-		t.Fatalf("unexpected store call user=%q endorsement=%q", store.lastUserID, store.lastEndorsementID)
+	if store.lastUserID != "user-1" || store.lastRecordType != savedslate.RecordTypeEndorsement || store.lastRecordID != "endorsement-1" {
+		t.Fatalf("unexpected store call user=%q type=%q id=%q", store.lastUserID, store.lastRecordType, store.lastRecordID)
 	}
 	var item savedslate.Item
 	if err := json.NewDecoder(putRec.Body).Decode(&item); err != nil {
 		t.Fatalf("decode item: %v", err)
 	}
-	if item.ID == "" || item.UserID != "user-1" || item.EndorsementID != "endorsement-1" {
+	if item.ID == "" || item.UserID != "user-1" || item.RecordType != savedslate.RecordTypeEndorsement || item.RecordID != "endorsement-1" {
 		t.Fatalf("unexpected item: %#v", item)
 	}
 
@@ -655,15 +655,36 @@ func TestSavedSlateListAndUpsertForAuthenticatedUser(t *testing.T) {
 	if err := json.NewDecoder(getRec.Body).Decode(&slate); err != nil {
 		t.Fatalf("decode slate: %v", err)
 	}
-	if len(slate.Items) != 1 || slate.Items[0].EndorsementID != "endorsement-1" {
+	if len(slate.Items) != 1 || slate.Items[0].RecordID != "endorsement-1" {
 		t.Fatalf("unexpected slate: %#v", slate)
+	}
+}
+
+func TestSavedSlateCanSaveMeasurePositionsAndVoterGuides(t *testing.T) {
+	store := &testSavedSlateStore{}
+	authStore := newTestAuthStoreWithSession("session-1", auth.User{ID: "user-1", Email: "reader@example.org", Role: auth.RoleUser})
+	handler := NewServerWithAuthAndServices(directory.NewMemoryStore(directory.DirectoryData{}), authStore, nil, nil, store, "", nil)
+
+	for _, body := range []string{
+		`{"recordType":"measure_position","recordId":"measure-position-1"}`,
+		`{"recordType":"voter_guide","recordId":"voter-guide-1"}`,
+	} {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPut, "/api/me/slate/items", strings.NewReader(body))
+		req.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: "session-1"})
+
+		handler.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, want %d for %s", rec.Code, http.StatusOK, body)
+		}
 	}
 }
 
 func TestSavedSlateDeleteRequiresOwner(t *testing.T) {
 	store := &testSavedSlateStore{
 		items: map[string][]savedslate.Item{
-			"owner-1": {{ID: "item-1", UserID: "owner-1", EndorsementID: "endorsement-1"}},
+			"owner-1": {{ID: "item-1", UserID: "owner-1", RecordType: savedslate.RecordTypeEndorsement, RecordID: "endorsement-1"}},
 		},
 	}
 	authStore := newTestAuthStoreWithSession("session-1", auth.User{ID: "user-2", Email: "other@example.org", Role: auth.RoleUser})
@@ -679,12 +700,27 @@ func TestSavedSlateDeleteRequiresOwner(t *testing.T) {
 	}
 }
 
-func TestSavedSlateRejectsInvalidEndorsementReference(t *testing.T) {
-	store := &testSavedSlateStore{invalidEndorsements: map[string]bool{"missing": true}}
+func TestSavedSlateRejectsInvalidReference(t *testing.T) {
+	store := &testSavedSlateStore{invalidRecords: map[string]bool{"endorsement\x00missing": true}}
 	authStore := newTestAuthStoreWithSession("session-1", auth.User{ID: "user-1", Email: "reader@example.org", Role: auth.RoleUser})
 	handler := NewServerWithAuthAndServices(directory.NewMemoryStore(directory.DirectoryData{}), authStore, nil, nil, store, "", nil)
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPut, "/api/me/slate/items", strings.NewReader(`{"endorsementId":"missing"}`))
+	req := httptest.NewRequest(http.MethodPut, "/api/me/slate/items", strings.NewReader(`{"recordType":"endorsement","recordId":"missing"}`))
+	req.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: "session-1"})
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
+	}
+}
+
+func TestSavedSlateRejectsInvalidRecordType(t *testing.T) {
+	store := &testSavedSlateStore{}
+	authStore := newTestAuthStoreWithSession("session-1", auth.User{ID: "user-1", Email: "reader@example.org", Role: auth.RoleUser})
+	handler := NewServerWithAuthAndServices(directory.NewMemoryStore(directory.DirectoryData{}), authStore, nil, nil, store, "", nil)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPut, "/api/me/slate/items", strings.NewReader(`{"recordType":"candidate","recordId":"candidate-1"}`))
 	req.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: "session-1"})
 
 	handler.ServeHTTP(rec, req)
@@ -825,10 +861,11 @@ type testAdminStore struct {
 }
 
 type testSavedSlateStore struct {
-	items               map[string][]savedslate.Item
-	invalidEndorsements map[string]bool
-	lastUserID          string
-	lastEndorsementID   string
+	items          map[string][]savedslate.Item
+	invalidRecords map[string]bool
+	lastUserID     string
+	lastRecordType string
+	lastRecordID   string
 }
 
 type testGoogleSignInService struct {
@@ -957,18 +994,19 @@ func (s *testSavedSlateStore) ListForUser(ctx context.Context, userID string) ([
 	return items, nil
 }
 
-func (s *testSavedSlateStore) UpsertForUser(ctx context.Context, userID string, endorsementID string) (savedslate.Item, error) {
+func (s *testSavedSlateStore) UpsertForUser(ctx context.Context, userID string, recordType string, recordID string) (savedslate.Item, error) {
 	s.lastUserID = userID
-	s.lastEndorsementID = endorsementID
-	if s.invalidEndorsements[endorsementID] {
+	s.lastRecordType = recordType
+	s.lastRecordID = recordID
+	if s.invalidRecords[recordType+"\x00"+recordID] {
 		return savedslate.Item{}, savedslate.ErrInvalidReference
 	}
 	if s.items == nil {
 		s.items = make(map[string][]savedslate.Item)
 	}
-	item := savedslate.Item{ID: "item-" + endorsementID, UserID: userID, EndorsementID: endorsementID, CreatedAt: time.Now().UTC(), UpdatedAt: time.Now().UTC()}
+	item := savedslate.Item{ID: "item-" + recordType + "-" + recordID, UserID: userID, RecordType: recordType, RecordID: recordID, CreatedAt: time.Now().UTC(), UpdatedAt: time.Now().UTC()}
 	for i, existing := range s.items[userID] {
-		if existing.EndorsementID == endorsementID {
+		if existing.RecordType == recordType && existing.RecordID == recordID {
 			s.items[userID][i] = item
 			return item, nil
 		}

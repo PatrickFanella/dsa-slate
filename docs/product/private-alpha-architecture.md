@@ -254,7 +254,7 @@ Router dependency is optional; current pathname switch can work for one more sli
 - remove saved item
 - grouped print-friendly slate view later
 
-Current slice covers endorsement saved items first. Add measure positions and voter guides as a follow-up once the saved item model supports multiple public record types.
+Current slice covers endorsement, measure-position, and voter-guide saved items.
 
 ### Admin UI
 
@@ -337,7 +337,7 @@ Before storing raw addresses, create a separate threat model covering:
 
 - saved slate table
 - API endpoints
-- saved endorsement references against public directory data
+- saved public-record references against public directory data
 - tests
 
 ### Slice 5: Saved slate UI

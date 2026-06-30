@@ -85,20 +85,21 @@ See `docs/reference/civic-api.md` for the privacy and response contract.
 
 ## Saved slate endpoints
 
-Saved slate endpoints require a valid `dsa_slate_session` cookie for any authenticated user. They store references to public endorsements; they do not store raw voter addresses.
+Saved slate endpoints require a valid `dsa_slate_session` cookie for any authenticated user. They store references to public endorsements, measure positions, and voter guides; they do not store raw voter addresses.
 
 `GET /api/me/slate`
 
-- Returns the current user's saved endorsement items:
+- Returns the current user's saved public-record items:
 
 ```json
-{"items":[{"id":"ssi_...","userId":"user-1","endorsementId":"endorsement-1","createdAt":"2026-06-30T00:00:00Z","updatedAt":"2026-06-30T00:00:00Z"}]}
+{"items":[{"id":"ssi_...","userId":"user-1","recordType":"endorsement","recordId":"endorsement-1","createdAt":"2026-06-30T00:00:00Z","updatedAt":"2026-06-30T00:00:00Z"}]}
 ```
 
 `PUT /api/me/slate/items`
 
-- Body: `{"endorsementId":"<public endorsement id>"}`
-- Creates the saved item or refreshes the existing item for that user and endorsement.
+- Body: `{"recordType":"endorsement","recordId":"<public record id>"}`
+- Supported `recordType` values: `endorsement`, `measure_position`, `voter_guide`.
+- Creates the saved item or refreshes the existing item for that user and public record.
 - Returns the saved item.
 
 `DELETE /api/me/slate/items/{id}`

@@ -70,7 +70,7 @@ describe('App', () => {
     expect(html).toContain('Sign in with Google');
     expect(html).toContain('My Slate');
     expect(html).toContain('Sign in to save');
-    expect(html).toContain('saves public endorsement references only');
+    expect(html).toContain('saves public record references only');
     expect(html).toContain('Voter guides');
     expect(html).toContain('Search this source-linked directory');
     expect(html).toContain('Browse filters use public API fields. Text search stays local. Raw addresses are not stored.');
@@ -122,8 +122,8 @@ describe('App', () => {
     try {
       const html = renderToString(<App />);
 
-      expect(html).toContain('Saved endorsements');
-      expect(html).toContain('Your slate stores references to public endorsements only. Raw voter addresses are not stored.');
+      expect(html).toContain('Saved records');
+      expect(html).toContain('Your slate stores references to public endorsements, voter guides, and ballot-measure positions. Raw voter addresses are not stored.');
       expect(html).toContain('Checking signed-in session.');
       expect(html).toContain('Back to directory');
       expect(html).toContain('Sign in with Google');

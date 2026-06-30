@@ -1,7 +1,10 @@
+export type SavedSlateRecordType = 'endorsement' | 'measure_position' | 'voter_guide';
+
 export type SavedSlateItem = {
   id: string;
   userId: string;
-  endorsementId: string;
+  recordType: SavedSlateRecordType;
+  recordId: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -29,10 +32,10 @@ export async function fetchSavedSlate(fetcher: typeof fetch = fetch): Promise<Sa
   return requestSavedSlateJson<SavedSlate>(fetcher, '/api/me/slate');
 }
 
-export async function saveSlateItem(endorsementId: string, fetcher: typeof fetch = fetch): Promise<SavedSlateItem> {
+export async function saveSlateItem(recordType: SavedSlateRecordType, recordId: string, fetcher: typeof fetch = fetch): Promise<SavedSlateItem> {
   return requestSavedSlateJson<SavedSlateItem>(fetcher, '/api/me/slate/items', {
     method: 'PUT',
-    body: JSON.stringify({ endorsementId }),
+    body: JSON.stringify({ recordType, recordId }),
   });
 }
 

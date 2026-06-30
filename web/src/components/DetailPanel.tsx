@@ -53,6 +53,31 @@ function ReviewMetadata({ reviewedAt, reviewNotes }: { reviewedAt?: string; revi
   );
 }
 
+function DetailSaveButton({ authenticated, onToggleSaved, saved, saving }: SaveActionProps) {
+  if (!onToggleSaved) {
+    return null;
+  }
+
+  return (
+    <button
+      className="mt-5 w-full rounded-none border-2 border-border-strong bg-primary px-4 py-3 font-black text-primary-foreground transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      disabled={!authenticated || saving}
+      type="button"
+      onClick={onToggleSaved}
+    >
+      {saving
+        ? saved
+          ? 'Removing…'
+          : 'Saving…'
+        : saved
+          ? 'Remove from my slate'
+          : authenticated
+            ? 'Save to my slate'
+            : 'Sign in to save this record'}
+    </button>
+  );
+}
+
 export function DetailPanel({ authenticated, item, onToggleSaved, saved, saving }: DetailPanelProps) {
   if (!item) {
     return (
@@ -92,8 +117,12 @@ export function DetailPanel({ authenticated, item, onToggleSaved, saved, saving 
           saving={saving}
         />
       ) : null}
-      {item.kind === 'measure' ? <MeasureDetail item={item} /> : null}
-      {item.kind === 'voterGuide' ? <VoterGuideDetail item={item} /> : null}
+      {item.kind === 'measure' ? (
+        <MeasureDetail authenticated={authenticated} item={item} onToggleSaved={onToggleSaved} saved={saved} saving={saving} />
+      ) : null}
+      {item.kind === 'voterGuide' ? (
+        <VoterGuideDetail authenticated={authenticated} item={item} onToggleSaved={onToggleSaved} saved={saved} saving={saving} />
+      ) : null}
     </aside>
   );
 }
@@ -124,24 +153,7 @@ function EndorsementDetail({
         <DetailRow label="Notes" value={item.notes} />
       </dl>
       <ReviewMetadata reviewedAt={item.reviewedAt} reviewNotes={item.reviewNotes} />
-      {onToggleSaved ? (
-        <button
-          className="mt-5 w-full rounded-none border-2 border-border-strong bg-primary px-4 py-3 font-black text-primary-foreground transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          disabled={!authenticated || saving}
-          type="button"
-          onClick={onToggleSaved}
-        >
-          {saving
-            ? saved
-              ? 'Removing…'
-              : 'Saving…'
-            : saved
-              ? 'Remove from my slate'
-              : authenticated
-                ? 'Save to my slate'
-                : 'Sign in to save this endorsement'}
-        </button>
-      ) : null}
+      <DetailSaveButton authenticated={authenticated} onToggleSaved={onToggleSaved} saved={saved} saving={saving} />
       <div className="mt-4 flex flex-wrap gap-4 text-sm font-bold">
         <DetailLink href={item.candidateCampaignUrl} label="Candidate site" />
         <DetailLink href={item.chapterWebsiteUrl} label="Chapter site" />
@@ -150,7 +162,7 @@ function EndorsementDetail({
   );
 }
 
-function MeasureDetail({ item }: { item: MeasureCardData }) {
+function MeasureDetail({ authenticated, item, onToggleSaved, saved, saving }: { item: MeasureCardData } & SaveActionProps) {
   return (
     <>
       <SourceBadge confidence={item.confidence} sourceUrl={item.sourceUrl} />
@@ -163,6 +175,7 @@ function MeasureDetail({ item }: { item: MeasureCardData }) {
         <DetailRow label="Summary" value={item.summary} />
       </dl>
       <ReviewMetadata reviewedAt={item.reviewedAt} reviewNotes={item.reviewNotes} />
+      <DetailSaveButton authenticated={authenticated} onToggleSaved={onToggleSaved} saved={saved} saving={saving} />
       <div className="mt-4 text-sm font-bold">
         <DetailLink href={item.chapterWebsiteUrl} label="Chapter site" />
       </div>
@@ -170,7 +183,7 @@ function MeasureDetail({ item }: { item: MeasureCardData }) {
   );
 }
 
-function VoterGuideDetail({ item }: { item: VoterGuideCardData }) {
+function VoterGuideDetail({ authenticated, item, onToggleSaved, saved, saving }: { item: VoterGuideCardData } & SaveActionProps) {
   return (
     <>
       <SourceBadge confidence={item.confidence} sourceDate={item.publishedAt} sourceUrl={item.sourceUrl} />
@@ -185,6 +198,7 @@ function VoterGuideDetail({ item }: { item: VoterGuideCardData }) {
         <DetailRow label="Summary" value={item.summary} />
       </dl>
       <ReviewMetadata reviewedAt={item.reviewedAt} reviewNotes={item.reviewNotes} />
+      <DetailSaveButton authenticated={authenticated} onToggleSaved={onToggleSaved} saved={saved} saving={saving} />
       <div className="mt-4 text-sm font-bold">
         <DetailLink href={item.chapterWebsiteUrl} label="Chapter site" />
       </div>
