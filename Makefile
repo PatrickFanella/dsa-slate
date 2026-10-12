@@ -9,7 +9,7 @@ help:
 deps:
 	pnpm --dir web install --frozen-lockfile
 
-verify: deps fmt lint test build compose-config open-pilot-check ## Run all checks
+verify: deps fmt-check lint test build compose-config open-pilot-check ## Run all checks
 
 fmt:
 	@git ls-files --cached --others --exclude-standard 'backend/*.go' | xargs -r gofmt -w
@@ -33,3 +33,10 @@ compose-config:
 open-pilot-check:
 	@test -f .gitea/ISSUE_TEMPLATE/open-pilot-task.yaml
 	@grep -q 'Test Command' .gitea/ISSUE_TEMPLATE/open-pilot-task.yaml
+
+
+.PHONY: fmt-check
+fmt-check: ## Check formatting without changing sources
+	@set -e; unformatted=$$(git ls-files -z --cached --others --exclude-standard 'backend/*.go' | xargs -0 -r gofmt -l); \
+	if [ -n "$$unformatted" ]; then printf '%s\n' "$$unformatted"; exit 1; fi
+	pnpm --dir web run format
