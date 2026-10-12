@@ -9,7 +9,7 @@ help:
 deps:
 	pnpm --dir web install --frozen-lockfile
 
-verify: deps fmt-check-check lint test build compose-config open-pilot-check ## Run all checks
+verify: deps fmt-check lint test build compose-config open-pilot-check ## Run all checks
 
 fmt:
 	@git ls-files --cached --others --exclude-standard 'backend/*.go' | xargs -r gofmt -w
