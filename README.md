@@ -1,6 +1,8 @@
-# Go + Vite React TypeScript + Postgres + Docker Template
+# DSA Slate
 
-Full-stack template with Go backend, Vite React TypeScript Tailwind frontend, Postgres, Docker Compose, and Open Pilot conventions.
+DSA Slate is an application scaffold with a Go backend, Vite React TypeScript
+frontend, PostgreSQL, Docker Compose, and Open Pilot conventions. It retains
+the template baseline; the project name does not establish completed organizing features.
 
 Created from `subculture-collective/project-template`.
 
@@ -16,7 +18,7 @@ This repository keeps the base Open Pilot issue template and PR template.
 Bootstrap labels after creating a repo from this template:
 
 ```bash
-open-pilot labels bootstrap subculture-collective/project-template-go-vite-react-ts-postgres-docker
+open-pilot labels bootstrap PatrickFanella/dsa-slate
 ```
 
 ## License
