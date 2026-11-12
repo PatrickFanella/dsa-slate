@@ -1,0 +1,54 @@
+# Quiet by design: one grouped pull request per ecosystem each month, direct
+# dependencies only, and no major-version updates (those need a person to
+# check for code changes).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /web
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 1
+    groups:
+      npm-minor-patch:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: gomod
+    directory: /backend
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 1
+    groups:
+      gomod-minor-patch:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: docker
+    directories:
+      - /backend
+      - /web
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 1
+    groups:
+      docker-minor-patch:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 1
+    groups:
+      actions-minor-patch:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
