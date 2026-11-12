@@ -4,7 +4,7 @@ COPY go.mod ./
 COPY . ./
 RUN go build -o /out/api ./cmd/app
 
-FROM alpine:3.22
+FROM alpine:3.24
 WORKDIR /app
 COPY --from=build /out/api /app/api
 EXPOSE 8080
