@@ -1,10 +1,10 @@
 # Agent Instructions
 
-This repository is a Go full-stack with Vite React TypeScript, Postgres, and Docker template derived from `subculture-collective/project-template`.
+This repository is DSA Slate: a Go, Vite React TypeScript, Postgres and Docker scaffold created from `subculture-collective/project-template`. No product features are on `main` yet.
 
 ## Priorities
 
-1. Keep the template runnable and minimal.
+1. Keep the scaffold runnable and minimal.
 2. Preserve Open Pilot issue and PR templates.
 3. Keep generated caches, secrets, and local data out of git.
 4. Update this file and `README.md` when stack conventions change.
